@@ -16,4 +16,14 @@ public class DummyPricingOptions extends DefaultPricingOptions {
     public OutputStream getCacheOutputStream() throws IOException {
         return null;
     }
+
+    @Override
+    public int getAttemptCount() {
+        return 2;
+    }
+
+    @Override
+    public boolean getCacheTimersEnabled() {
+        return true;
+    }
 }

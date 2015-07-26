@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
-import uk.me.candle.eve.pricing.impl.EveMarketData;
+import uk.me.candle.eve.pricing.impl.EveMarketeer;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
 
@@ -22,9 +22,9 @@ import uk.me.candle.eve.pricing.options.PricingFetch;
  *
  * @author Candle
  */
-public class TestEveMarketData extends PricingTests {
+public class TestEveMarketeer extends PricingTests {
 
-    @Test
+    //@Test
     public void testGetPriceOnlineRegion() {
         Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
             @Override
@@ -37,17 +37,55 @@ public class TestEveMarketData extends PricingTests {
             }
             @Override
             public PricingFetch getPricingFetchImplementation() {
-                return PricingFetch.EVE_MARKETDATA;
+                return PricingFetch.EVEMARKETEER;
+            }
+        });
+        testAll(pricing);
+    }
+
+    //@Test
+    public void testGetPriceOnlineSystem() {
+        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+            @Override
+            public List<Long> getLocations() {
+                return Collections.singletonList(30000142L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.SYSTEM;
+            }
+            @Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVEMARKETEER;
+            }
+        });
+        testAll(pricing);
+    }
+    //@Test
+    public void testGetPriceOnlineStation() {
+        EveMarketeer pricing = new EveMarketeer();
+        pricing.setOptions(new DummyPricingOptions() {
+            @Override
+            public List<Long> getLocations() {
+                return Collections.singletonList(60003760L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.STATION;
+            }
+            @Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVEMARKETEER;
             }
         });
         testAll(pricing);
     }
 	
-    @Test
+	@Test
     public void testGetPriceFail() {
-        System.out.println("EveMarketData Fail Test");
-        final EveMarketData dummyPricing = new EveMarketDataEmptyDummy();
-        dummyPricing.setOptions(new DummyPricingOptions() {
+        System.out.println("EveMarketeer Fail Test");
+        final EveMarketeer dummyPricing = new EveMarketeerEmptyDummy();
+		dummyPricing.setOptions(new DummyPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.emptyList();
@@ -58,7 +96,7 @@ public class TestEveMarketData extends PricingTests {
 		assertEquals(failed.size(), 1);
     }
 
-    class EveMarketDataEmptyDummy extends EveMarketData {
+	class EveMarketeerEmptyDummy extends EveMarketeer {
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
 			throw  new DocumentException("Test");

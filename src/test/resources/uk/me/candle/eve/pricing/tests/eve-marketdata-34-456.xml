@@ -1,1 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><eve><price id="34">1.93927402811</price><price id="456">73532.004727273</price></eve>
+<emd version="2">
+	<currentTime>2011-11-18 10:42:02</currentTime>
+	<result>
+		<rowset name="item_prices" key="buysell,typeID,regionID" columns="buysell,typeID,regionID,price,updated">
+			<row buysell="s" typeID="34" regionID="10000002" price="1.93927402811" updated="2011-11-18 09:09:53"/>
+			<row buysell="s" typeID="456" regionID="10000002" price="73532.004727273" updated="2011-11-18 09:09:53"/>
+			<row buysell="b" typeID="34" regionID="10000002" price="1" updated="2011-11-18 09:09:53"/>
+			<row buysell="b" typeID="456" regionID="10000002" price="7" updated="2011-11-18 09:09:53"/>
+		</rowset>
+	</result>
+</emd>

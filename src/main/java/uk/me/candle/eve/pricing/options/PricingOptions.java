@@ -6,16 +6,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Proxy;
-import uk.me.candle.eve.pricing.options.PricingNumber;
-import uk.me.candle.eve.pricing.options.PricingType;
 import java.util.List;
 
 // </editor-fold>
 
 public interface PricingOptions {
     public long getPriceCacheTimer();
-    public String getPricingFetchImplementation();
-    public List<Long> getRegions();
+    public PricingFetch getPricingFetchImplementation();
+    public List<Long> getLocations();
+    public LocationType getLocationType();
     public PricingType getPricingType();
     public PricingNumber getPricingNumber();
     /**

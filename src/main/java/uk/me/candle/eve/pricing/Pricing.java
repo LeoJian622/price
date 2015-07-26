@@ -49,6 +49,8 @@ public interface Pricing {
      */
     public void setPricingOptions(PricingOptions options);
 
+    public PricingOptions getPricingOptions();
+
     /**
      * gets the time that the price for the item will be automatically updated.
      * @param itemID

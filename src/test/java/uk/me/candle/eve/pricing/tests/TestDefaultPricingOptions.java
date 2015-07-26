@@ -32,12 +32,11 @@ public class TestDefaultPricingOptions {
     @Test
     public void testGetPricingFetchImplementation() {
         assertNotNull(options.getPricingFetchImplementation());
-        assertTrue("length > 0", options.getPricingFetchImplementation().length() > 0);
     }
 
     @Test
     public void testGetRegions() {
-        assertNotNull(options.getRegions());
+        assertNotNull(options.getLocations());
     }
 
     @Test

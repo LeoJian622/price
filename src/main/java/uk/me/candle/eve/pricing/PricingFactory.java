@@ -2,10 +2,10 @@ package uk.me.candle.eve.pricing;
 
 // <editor-fold defaultstate="collapsed" desc="imports">
 
+import uk.me.candle.eve.pricing.impl.*;
+import uk.me.candle.eve.pricing.options.PricingFetch;
+import static uk.me.candle.eve.pricing.options.PricingFetch.EVEMARKETEER;
 import uk.me.candle.eve.pricing.options.PricingOptions;
-import uk.me.candle.eve.pricing.impl.EveCentral;
-import uk.me.candle.eve.pricing.impl.EveMarketData;
-import uk.me.candle.eve.pricing.impl.EveMetrics;
 import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 // </editor-fold>
@@ -14,53 +14,63 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
  * @author Candle
  */
 public class PricingFactory {
-    static PricingOptions options;
     static EveCentral eveCentral;
-    static EveMetrics eveMetrics;
     static EveMarketData eveMarketData;
+    static EveMarketeer eveMarketeer;
+    static EveAddicts eveAddicts;
 
-    public static Pricing getPricing() {
-        if (options == null) {
-            options = new DefaultPricingOptions();
-        }
-        String impl = options != null ? options.getPricingFetchImplementation() : null;
-        if ("eve-central".equalsIgnoreCase(impl)) {
-            return getEveCentral();
-        } else if ("eve-metrics".equalsIgnoreCase(impl)
-            || "eve-marketdata".equalsIgnoreCase(impl)) {
-            return getEveMarketData();
-        } else {
-            return getEveMarketData();
+    public static Pricing getPricing(PricingOptions options) {
+        switch (options.getPricingFetchImplementation()) {
+            case EVEMARKETEER: return getEveMarketeer(options);
+            case EVE_ADDICTS: return getEveAddicts(options);
+            case EVE_CENTRAL: return getEveCentral(options);
+            case EVE_MARKETDATA: return getEveMarketData(options);
+            default: return getEveCentral(options);
         }
     }
 
-    public static Pricing getEveMarketData() {
+    private static Pricing getEveMarketData(PricingOptions options) {
         if (eveMarketData == null) {
             eveMarketData = new EveMarketData();
-            if (options != null) eveMarketData.setOptions(options);
+        } else {
+            eveMarketData.resetAllAttemptCounters();
+        }
+        if (options != null) {
+            eveMarketData.setOptions(options);
         }
         return eveMarketData;
     }
-    public static Pricing getEveMetrics() {
-        if (eveMetrics == null) {
-            eveMetrics = new EveMetrics();
-            if (options != null) eveMetrics.setOptions(options);
+    private static Pricing getEveMarketeer(PricingOptions options) {
+        if (eveMarketeer == null) {
+            eveMarketeer = new EveMarketeer();
+        } else {
+            eveMarketeer.resetAllAttemptCounters();
         }
-        return eveMetrics;
+        if (options != null) {
+            eveMarketeer.setOptions(options);
+        }
+        return eveMarketeer;
     }
-    public static Pricing getEveCentral() {
+    private static Pricing getEveCentral(PricingOptions options) {
         if (eveCentral == null) {
             eveCentral = new EveCentral();
+        } else {
+            eveCentral.resetAllAttemptCounters();
+        }
+        if (options != null) {
             eveCentral.setOptions(options);
-            if (options != null) eveCentral.setOptions(options);
         }
         return eveCentral;
     }
-
-    public static void setPricingOptions(PricingOptions opts) {
-        options = opts;
-        if (eveMetrics != null) eveMetrics.setOptions(options);
-        if (eveCentral != null) eveCentral.setOptions(options);
-        if (eveMarketData != null) eveMarketData.setOptions(options);
+    private static Pricing getEveAddicts(PricingOptions options) {
+        if (eveAddicts == null) {
+            eveAddicts = new EveAddicts();
+        } else {
+            eveAddicts.resetAllAttemptCounters();
+        }
+        if (options != null) {
+            eveAddicts.setOptions(options);
+        }
+        return eveAddicts;
     }
 }

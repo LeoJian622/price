@@ -6,6 +6,8 @@ import java.io.OutputStream;
 import java.net.Proxy;
 import java.util.Collections;
 import java.util.List;
+import uk.me.candle.eve.pricing.options.LocationType;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingOptions;
 import uk.me.candle.eve.pricing.options.PricingType;
@@ -23,13 +25,18 @@ public class DefaultPricingOptions implements PricingOptions {
     }
 
     @Override
-    public String getPricingFetchImplementation() {
-        return "eve-marketdata";
+    public PricingFetch getPricingFetchImplementation() {
+        return PricingFetch.EVE_MARKETDATA;
     }
 
     @Override
-    public List<Long> getRegions() {
+    public List<Long> getLocations() {
         return Collections.singletonList(new Long(10000002)); // The Forge
+    }
+
+    @Override
+    public LocationType getLocationType() {
+        return LocationType.REGION;
     }
 
     @Override

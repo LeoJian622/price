@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Collection;
-import java.util.logging.Level;
 import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -21,38 +20,42 @@ import uk.me.candle.eve.pricing.options.PricingType;
  *
  * @author Candle
  */
-public class EveCentral extends AbstractPricingEasy {
-   
+public class EveMarketeer extends AbstractPricingEasy {
+
     @Override
     protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {
-        StringBuilder xPath = new StringBuilder("/evec_api/marketstat/type[@id=\"");
+        StringBuilder xPath = new StringBuilder("/result/row[type_id=");
         xPath.append(typeID);
-        xPath.append("\"]/");
+        xPath.append("]/");
         switch (number) {
         case BUY:
-            xPath.append("buy/");
+            xPath.append("buy_");
             break;
         case SELL:
-            xPath.append("sell/");
+            xPath.append("sell_");
             break;
         default:
             throw new UnsupportedOperationException("Unable to use the 'number': " + number);
         }
         switch (type) {
         case HIGH:
-            xPath.append("max");
+            xPath.append("highest");
             break;
         case LOW:
-            xPath.append("min");
+            xPath.append("lowest");
             break;
         case MEAN:
             xPath.append("avg");
             break;
         case MEDIAN:
-            xPath.append("median");
+            xPath.append("geo_mean"); //harm_mean
             break;
         case PERCENTILE:
-            xPath.append("percentile");
+            if (number == PricingNumber.BUY){
+                xPath.append("highest5");
+            } else {
+                xPath.append("lowest5");
+            }
             break;
         default:
             throw new UnsupportedOperationException("Unable to use the 'type': " + type);
@@ -70,31 +73,34 @@ public class EveCentral extends AbstractPricingEasy {
     protected URL getURL(Collection<Integer> itemIDs) throws SocketTimeoutException, DocumentException, IOException {
         StringBuilder query = new StringBuilder();
 
+        //Request Type
+        if (getPricingOptions().getLocationType() == LocationType.STATION){
+            query.append("station_info/");
+        } else if (getPricingOptions().getLocationType() == LocationType.SYSTEM){
+            query.append("system_info/");
+        } else if (getPricingOptions().getLocationType() == LocationType.REGION){
+            query.append("info/");
+        }
+
         //TypeIDs
+        boolean space = false;
         for (Integer i : itemIDs) {
-            if (query.length() > 0) {
-                query.append('&');
+            if (space){
+                query.append('_');
+            } else {
+                space = true;
             }
-            query.append("typeid=");
             query.append(i);
         }
-        //Location
-        if (getPricingOptions().getLocationType() == LocationType.STATION) {
-            throw new UnsupportedOperationException(LocationType.STATION.name() + " is not supported by EveCentral");
-        } else if (getPricingOptions().getLocationType() == LocationType.SYSTEM
-                   && !getPricingOptions().getLocations().isEmpty()) { //Not empty
-            query.append("&usesystem=");
+        query.append("/");
+
+        query.append("xml/");
+
+        //LocationIDs
+        if (!getPricingOptions().getLocations().isEmpty()){ //We only want one location at the time
             query.append(getPricingOptions().getLocations().get(0));
-
-        } else if (getPricingOptions().getLocationType() == LocationType.REGION) {
-            for (Long l : getPricingOptions().getLocations()) { //Region(s)
-                query.append("&regionlimit=");
-                query.append(l);
-            }
         }
-        //Max order age
-        query.append("&hours=96");
 
-        return new URL("http://api.eve-central.com/api/marketstat?" + query.toString());
+        return new URL("http://www.evemarketeer.com/api/" + query.toString());
     }
 }

@@ -32,6 +32,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingType;
+import uk.me.candle.eve.pricing.util.SplitList;
 
 // </editor-fold>
 /**
@@ -49,20 +50,24 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * list of listeners to notify when a price has been fetched.
      */
-    private List<WeakReference<PricingListener>> pricingListeners = new ArrayList<WeakReference<PricingListener>>();
+    private final List<WeakReference<PricingListener>> pricingListeners = new ArrayList<WeakReference<PricingListener>>();
     /**
      * list of listeners to notify when a fetch is starting and finishing.
      */
-    private List<WeakReference<PricingFetchListener>> pricingFetchListeners = new ArrayList<WeakReference<PricingFetchListener>>();
+    private final List<WeakReference<PricingFetchListener>> pricingFetchListeners = new ArrayList<WeakReference<PricingFetchListener>>();
     /**
      * queue of itemIDs that are waiting to be fetched
      */
-    private Queue<Integer> waitingQueue = new ConcurrentLinkedQueue<Integer>();
+    private final Queue<Integer> waitingQueue = new ConcurrentLinkedQueue<Integer>();
+    /**
+     * queue of itemIDs that failed on last fetched
+     */
+    private SplitList failed;
     /**
      * list of item IDs that are being fetched - this is here so that we don't queue an ID that is in the process of
      * being fetched.
      */
-    private List<Integer> currentlyEvaluating = Collections.synchronizedList(new ArrayList<Integer>());
+    private final List<Integer> currentlyEvaluating = Collections.synchronizedList(new ArrayList<Integer>());
     /**
      * single thread that handles the price fetching.
      */
@@ -213,7 +218,7 @@ public abstract class AbstractPricing implements Pricing {
      * less then or equal to 0 means that there is no limit.
      * @return
      */
-    protected int getbatchSize() {
+    protected int getBatchSize() {
         return -1;
     }
 
@@ -227,7 +232,7 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void setPrice(int itemID, PricingType type, PricingNumber number, Double price) {
-        long cacheTime = 0;
+        long cacheTime;
         if (price > 0) {
             // can't use the Long.MAX_VALUE as the check for "does this item need updating"
             // is the cacheTime + cacheTimer, which, if the cacheTime is MAX_VALUE, the sum
@@ -262,6 +267,7 @@ public abstract class AbstractPricing implements Pricing {
         this.cacheTimer = options.getPriceCacheTimer();
     }
 
+    @Override
     public PricingOptions getPricingOptions() {
         return options;
     }
@@ -273,7 +279,6 @@ public abstract class AbstractPricing implements Pricing {
             PricingListener pl = wpl.get();
             if (pl == null) {
                 pricingListeners.remove(i);
-                continue;
             } else {
                 if (pl.equals(o)) {
                     pricingListeners.remove(i);
@@ -291,7 +296,6 @@ public abstract class AbstractPricing implements Pricing {
             PricingListener pl = wpl.get();
             if (pl == null) {
                 pricingListeners.remove(i);
-                continue;
             } else {
                 pl.priceUpdated(itemId, this);
             }
@@ -315,7 +319,6 @@ public abstract class AbstractPricing implements Pricing {
             PricingFetchListener pl = wpl.get();
             if (pl == null) {
                 pricingFetchListeners.remove(i);
-                continue;
             } else {
                 if (pl.equals(o)) {
                     pricingFetchListeners.remove(i);
@@ -333,7 +336,6 @@ public abstract class AbstractPricing implements Pricing {
             PricingFetchListener pl = wpl.get();
             if (pl == null) {
                 pricingFetchListeners.remove(i);
-                continue;
             } else {
                 if (started) {
                     pl.fetchStarted();
@@ -407,6 +409,33 @@ public abstract class AbstractPricing implements Pricing {
                     }
                 }
                 notifyPricingFetchListeners(true);
+
+                //Do a binary search for the failed IDs
+                if (failed != null) {
+                    List<Integer> nextList = failed.getNextList();
+                    if (nextList != null) { //Next list
+                        evaluate.addAll(nextList);
+                    } else { //List is empty - do we need to do it again?
+                        Set<Integer> tryAgain = new HashSet<Integer>();
+                        for (int typeID : failed.getFullList()) {
+                            addFailureCount(typeID);
+                            if (checkFailureCountExceeded(typeID)) {
+                                tryAgain.add(typeID);
+                            }
+                        }
+                        if (tryAgain.isEmpty()) {
+                            failed = null; //All done o/
+                        } else {
+                            failed = new SplitList(tryAgain); //again say the monkey!
+                            nextList = failed.getNextList();
+                            if (nextList != null) {
+                                evaluate.addAll(nextList);
+                            } else {
+                                throw new RuntimeException("The impossible have happened!");
+                            }
+                        }
+                    }
+                }
                 // fill the queue that is waiting, up to the size of the batch size.
                 // A = queueSize > 0
                 // B = batchSize > 0
@@ -424,7 +453,7 @@ public abstract class AbstractPricing implements Pricing {
                 // ==> A & ((B & C) | C)
                 // ==> A & (B | C)
                 if (logger.isDebugEnabled()) logger.debug("There are " + waitingQueue.size() + " items in the queue.");
-                while (waitingQueue.size() > 0 && (!(getbatchSize() > 0) || evaluate.size() < getbatchSize())) {
+                while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
                     Integer num = waitingQueue.remove();
                     if (checkFailureCountExceeded(num)) {
                         evaluate.add(num);
@@ -435,15 +464,22 @@ public abstract class AbstractPricing implements Pricing {
                 // handle the list.
                 Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
                 // for each of the prices, cache, and notify listeners
+                boolean fail = false;
                 for (Integer itemId : evaluate) {
                     if (prices.containsKey(itemId)) {
                         PriceContainer priceContainer = prices.get(itemId);
                         cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
                         notifyPricingListeners(itemId);
                     } else {
-                        addFailureCount(itemId);
+                        fail = true;
                         waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
                     }
+                }
+                if (fail && failed == null) { //Start new search for the error
+                    failed = new SplitList(evaluate);
+                }
+                if (!fail && failed != null) {
+                    failed.removeLast();
                 }
                 evaluate.clear();
                 currentlyEvaluating.clear();
@@ -496,6 +532,7 @@ public abstract class AbstractPricing implements Pricing {
         waitingQueue.clear();
     }
 
+    @Override
     public void shutdown() {
         shuttingDown = true;
         waitingQueue.clear();
@@ -555,7 +592,6 @@ public abstract class AbstractPricing implements Pricing {
             PricingListener pl = wpl.get();
             if (pl == null) {
                 pricingListeners.remove(i);
-                continue;
             } else {
                 pl.priceUpdateFailed(itemID, pricing);
             }
@@ -589,4 +625,6 @@ public abstract class AbstractPricing implements Pricing {
         // TODO This needs to have some concrete implementation
         return Collections.unmodifiableList(fetchAttemptReason(typeID));
     }
+
+    
 }
