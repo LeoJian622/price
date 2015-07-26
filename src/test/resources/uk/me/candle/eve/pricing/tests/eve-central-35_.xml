@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!-- Automatically generated data from EVE-Central.com -->
+<!-- This is the new API :-) -->
+<evec_api version="2.0" method="marketstat_xml">
+    <marketstat>
+        <type id="34">
+            <all>
+                <volume>267585089859</volume>
+                <avg>4.12795407334</avg>
+                <max>3500.0</max>
+                <min>0.16</min>
+                <stddev>46.8019512914</stddev>
+                <median>2.85</median>
+            </all>
+            <buy>
+                <volume>161148626181</volume>
+                <avg>2.28676491913</avg>
+                <max>4.0</max>
+                <min>0.16</min>
+                <stddev>0.548061736829</stddev>
+                <median>2.32</median>
+            </buy>
+            <sell>
+                <volume>106436463678</volume>
+                <avg>3.42015939659</avg>
+                <max>3500.0</max>
+                <min>1.75</min>
+                <stddev>54.1225411427</stddev>
+                <median>3.0</median>
+            </sell>
+        </type>
+        <type id="35">
+            <all>
+                <volume>86836612770</volume>
+                <avg>4.30224228956</avg>
+                <max>455.0</max>
+                <min>0.2</min>
+                <stddev>10.1356297448</stddev>
+                <median>3.95</median>
+            </all>
+            <buy>
+                <volume>71008851889</volume>
+                <avg>3.4231466839</avg>
+                <max>4.7</max>
+                <min>0.2</min>
+                <stddev>0.930235866615</stddev>
+                <median>3.66</median>
+            </buy>
+            <sell>
+                <volume>15827760881</volume>
+                <avg>4.47900908581</avg>
+                <max>455.0</max>
+                <min>1.5</min>
+                <stddev>14.2544008305</stddev>
+                <median>4.12</median>
+            </sell>
+        </type>
+    </marketstat>
+</evec_api>

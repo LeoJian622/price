@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<evemetrics api_version='2.0'>
+<!--
+EVE Metrics Item API
+Documentation is available at the same URI with a .html extension.
+-->
+     <type id='34'>
+          <name>Tritanium</name>
+          <region id='10000001'>
+               <name>Derelik</name>
+               <buy>
+                    <minimum>0.01</minimum>
+                    <maximum>4.57</maximum>
+                    <median>3.91</median>
+                    <average>3.67639371428572</average>
+               </buy>
+               <sell>
+                    <minimum>2.4</minimum>
+                    <maximum>41400000.0</maximum>
+                    <median>4.2</median>
+                    <average>325614.592322715</average>
+               </sell>
+          </region>
+          <region id='10000002'>
+               <name>The Forge</name>
+               <buy>
+                    <minimum>0.01</minimum>
+                    <maximum>4.21</maximum>
+                    <median>3.71</median>
+                    <average>3.61406133333333</average>
+               </buy>
+               <sell>
+                    <minimum>4.0</minimum>
+                    <maximum>41400000.0</maximum>
+                    <median>4.19</median>
+                    <average>254440.61498882</average>
+               </sell>
+          </region>
+          <global>
+               <buy>
+                    <minimum>0.01</minimum>
+                    <maximum>4.57</maximum>
+                    <median>3.9</median>
+                    <average>3.6502738403677</average>
+               </buy>
+               <sell>
+                    <minimum>2.4</minimum>
+                    <maximum>41400000.0</maximum>
+                    <median>4.2</median>
+                    <average>308543.993992464</average>
+               </sell>
+          </global>
+     </type>
+     <type id='35'>
+          <name>Pyerite</name>
+          <region id='10000001'>
+               <name>Derelik</name>
+               <buy>
+                    <minimum>0.13</minimum>
+                    <maximum>4.0</maximum>
+                    <median>3.6</median>
+                    <average>3.03828285714286</average>
+               </buy>
+               <sell>
+                    <minimum>3.8</minimum>
+                    <maximum>493.33</maximum>
+                    <median>4.1</median>
+                    <average>18.8092634146341</average>
+               </sell>
+          </region>
+          <region id='10000002'>
+               <name>The Forge</name>
+               <buy>
+                    <minimum>0.02</minimum>
+                    <maximum>4.64</maximum>
+                    <median>3.82</median>
+                    <average>3.69630217391304</average>
+               </buy>
+               <sell>
+                    <minimum>3.9</minimum>
+                    <maximum>5927000.0</maximum>
+                    <median>4.36</median>
+                    <average>70564.1614261905</average>
+               </sell>
+          </region>
+          <global>
+               <buy>
+                    <minimum>0.01</minimum>
+                    <maximum>4.64</maximum>
+                    <median>3.6</median>
+                    <average>3.37234615384615</average>
+               </buy>
+               <sell>
+                    <minimum>3.24</minimum>
+                    <maximum>5927000.0</maximum>
+                    <median>4.1</median>
+                    <average>14038.6915970081</average>
+               </sell>
+          </global>
+     </type>
+</evemetrics>
