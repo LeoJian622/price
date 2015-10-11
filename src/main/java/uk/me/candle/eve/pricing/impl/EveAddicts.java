@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Collection;
-import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
@@ -17,8 +16,7 @@ import uk.me.candle.eve.pricing.options.PricingType;
  *
  * @author Niklas
  */
-public class EveAddicts  extends AbstractPricingEasy {
-    private static final Logger logger = Logger.getLogger(EveAddicts.class);
+public class EveAddicts extends AbstractPricingEasy {
 
     @Override
     protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {

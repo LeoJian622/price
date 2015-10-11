@@ -19,6 +19,7 @@ import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveAddicts;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 /**
  *
@@ -26,14 +27,15 @@ import uk.me.candle.eve.pricing.options.PricingFetch;
  */
 public class TestEveAddicts extends PricingTests {
 
-    @Test
+    //@Test
     public void testPars() {
         Double.valueOf("12.163408477416");
         Double.valueOf("11.08");
     }
-    @Test
+
+	//@Test
     public void testGetPriceOnlineRegion() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
@@ -52,9 +54,9 @@ public class TestEveAddicts extends PricingTests {
         testAll(pricing);
     }
     
-    @Test
+    //@Test
     public void testGetPriceOnlineStation() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(60003760L);
@@ -73,23 +75,27 @@ public class TestEveAddicts extends PricingTests {
 	
     @Test
     public void testGetPriceFail() {
-        System.out.println("EveAddicts Fail Test");
-        final EveAddicts dummyPricing = new EveAddictsEmptyDummy();
-        dummyPricing.setOptions(new DummyPricingOptions() {
+		System.out.println("Testing EVE_ADDICTS errors");
+        final EveAddicts pricing = new EveAddictsEmptyDummy();
+        pricing.setOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
-                return Collections.emptyList();
+                return Collections.singletonList(10000002L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.REGION;
             }
             @Override
             public PricingFetch getPricingFetchImplementation() {
                 return PricingFetch.EVE_ADDICTS;
             }
         });
-        dummyPricing.setPrice(34, -1d);
-        Set<Integer> failed = synchronousPriceFetch(dummyPricing, 34);
+        pricing.setPrice(34, -1d);
+        Set<Integer> failed = synchronousPriceFetch(pricing, 34);
 		assertEquals(failed.size(), 1);
     }
-    
+
     class EveAddictsEmptyDummy extends EveAddicts {
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {

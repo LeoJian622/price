@@ -71,6 +71,11 @@ public class DefaultPricingOptions implements PricingOptions {
 
     @Override
     public int getAttemptCount() {
-        return 1000; // return a number that is not infinite but is sufficiently large.
+        return 2;
     }
+
+	@Override
+	public boolean getUseBinaryErrorSearch() {
+		return false;
+	}
 }

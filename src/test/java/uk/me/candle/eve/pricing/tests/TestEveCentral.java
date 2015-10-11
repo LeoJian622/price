@@ -17,6 +17,7 @@ import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveCentral;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 /**
  *
@@ -24,12 +25,8 @@ import uk.me.candle.eve.pricing.options.PricingFetch;
  */
 public class TestEveCentral extends PricingTests {
 
-    private static final Integer[] OK_FAILED = new Integer[2];
     @Before
-	public void setUp() {
-        OK_FAILED[0] = 33578;
-        OK_FAILED[1] = 33579;
-	}
+	public void setUp() { }
 
     @Test
     public void testGetPriceOnlineRegions() {
@@ -64,7 +61,7 @@ public class TestEveCentral extends PricingTests {
         locations.add(10000001L); //Ammatar: Derelik
         locations.add(10000049L); //Khanid: Khanid
 
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override public List<Long> getLocations() {
                 return locations;
             }
@@ -77,11 +74,12 @@ public class TestEveCentral extends PricingTests {
                 return PricingFetch.EVE_CENTRAL;
             }
         });
-        testAll(pricing, OK_FAILED);
+        testAll(pricing);
     }
+
     @Test
     public void testGetPriceOnlineRegion() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
             }
@@ -94,12 +92,12 @@ public class TestEveCentral extends PricingTests {
                 return PricingFetch.EVE_CENTRAL;
             }
         });
-        testAll(pricing, OK_FAILED);
+        testAll(pricing);
     }
     
     @Test
     public void testGetPriceOnlineSystem() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(30000142L);
@@ -113,21 +111,29 @@ public class TestEveCentral extends PricingTests {
                 return PricingFetch.EVE_CENTRAL;
             }
         });
-        testAll(pricing, OK_FAILED);
+        testAll(pricing);
     }
 
     @Test
     public void testGetPriceFail() {
-        System.out.println("EveCentral Fail Test");
-        final EveCentral dummyPricing = new EveCentralEmptyDummy();
-        dummyPricing.setOptions(new DummyPricingOptions() {
+		System.out.println("Testing EVE_CENTRAL errors");
+        final EveCentral pricing = new EveCentralEmptyDummy();
+        pricing.setOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
-                return Collections.emptyList();
+                return Collections.singletonList(10000002L);
+            }
+			@Override
+            public LocationType getLocationType() {
+                return LocationType.REGION;
+            }
+			@Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVE_CENTRAL;
             }
         });
-        dummyPricing.setPrice(34, -1d);
-		Set<Integer> failed = synchronousPriceFetch(dummyPricing, 34);
+        pricing.setPrice(34, -1d);
+		Set<Integer> failed = synchronousPriceFetch(pricing, 34);
 		assertEquals(failed.size(), 1);
     }
 

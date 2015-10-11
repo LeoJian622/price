@@ -3,7 +3,7 @@
     <groupId>uk.me.candle</groupId>
     <artifactId>pricing</artifactId>
     <packaging>jar</packaging>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
     <name>pricing</name>
     <url>http://maven.apache.org</url>
     <distributionManagement>
@@ -23,6 +23,25 @@
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<phase>process-resources</phase>
+						<configuration>
+							<target>
+								<copy todir="${project.build.directory}">
+									<fileset dir="" includes="items.xml"/>
+								</copy>
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
         </plugins>
         <extensions>
 			<!-- Enabling the use of FTP -->
@@ -39,11 +58,43 @@
             <artifactId>jaxen</artifactId>
             <version>1.1.1</version>
         </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.13</version>
-        </dependency>
+       <dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+		<dependency>
+			<!--
+				use the log4j adaptor, which sends the logging calls to
+				log4j. - the artifact is slf4j-log4j12, because we
+				are using the log4j 1.2.* library
+			-->
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.6.1</version>
+			<!--<scope>runtime</scope>-->
+		</dependency>
+		<dependency>
+			<!--
+				This contains fake commons-logging classes that
+				redirect commons-logging calls to the slf4j API
+			-->
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.16</version>
+			<!--<scope>runtime</scope>-->
+		</dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

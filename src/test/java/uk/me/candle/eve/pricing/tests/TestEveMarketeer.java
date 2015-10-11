@@ -16,6 +16,7 @@ import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveMarketeer;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 // </editor-fold>
 /**
@@ -26,7 +27,7 @@ public class TestEveMarketeer extends PricingTests {
 
     //@Test
     public void testGetPriceOnlineRegion() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
@@ -45,7 +46,7 @@ public class TestEveMarketeer extends PricingTests {
 
     //@Test
     public void testGetPriceOnlineSystem() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(30000142L);
@@ -63,8 +64,7 @@ public class TestEveMarketeer extends PricingTests {
     }
     //@Test
     public void testGetPriceOnlineStation() {
-        EveMarketeer pricing = new EveMarketeer();
-        pricing.setOptions(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(60003760L);
@@ -83,16 +83,24 @@ public class TestEveMarketeer extends PricingTests {
 	
 	@Test
     public void testGetPriceFail() {
-        System.out.println("EveMarketeer Fail Test");
-        final EveMarketeer dummyPricing = new EveMarketeerEmptyDummy();
-		dummyPricing.setOptions(new DummyPricingOptions() {
+		System.out.println("Testing EVEMARKETEER errors");
+        final EveMarketeer pricing = new EveMarketeerEmptyDummy();
+		pricing.setOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
-                return Collections.emptyList();
+                return Collections.singletonList(10000002L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.REGION;
+            }
+			@Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVEMARKETEER;
             }
         });
-        dummyPricing.setPrice(34, -1d);
-        Set<Integer> failed = synchronousPriceFetch(dummyPricing, 34);
+        pricing.setPrice(34, -1d);
+        Set<Integer> failed = synchronousPriceFetch(pricing, 34);
 		assertEquals(failed.size(), 1);
     }
 

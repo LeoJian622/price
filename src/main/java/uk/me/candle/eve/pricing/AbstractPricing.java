@@ -26,10 +26,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingType;
 import uk.me.candle.eve.pricing.util.SplitList;
@@ -40,8 +41,7 @@ import uk.me.candle.eve.pricing.util.SplitList;
  * @author Candle
  */
 public abstract class AbstractPricing implements Pricing {
-    private static final Logger logger = Logger.getLogger(AbstractPricing.class);
-
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractPricing.class);
     // <editor-fold defaultstate="collapsed" desc="fields">
     /**
      * internal mem-cache of prices.
@@ -115,10 +115,10 @@ public abstract class AbstractPricing implements Pricing {
                 try {
                     read(options.getCacheInputStream());
                 } catch (IOException ioe) {
-                    logger.error("Error reading the cache file (Other IO error)", ioe);
+                    LOG.error("Error reading the cache file (Other IO error)", ioe);
                     cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
                 } catch (ClassNotFoundException cnfe) {
-                    logger.error("Error reading the cache file (incompatible classes)", cnfe);
+                    LOG.error("Error reading the cache file (incompatible classes)", cnfe);
                     cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
                 }
             } else {
@@ -131,6 +131,7 @@ public abstract class AbstractPricing implements Pricing {
     @Override
     public Double getPrice(int itemID, PricingType type, PricingNumber number) {
 		if (priceFetchingThread == null) {
+			shuttingDown = false;
 			priceFetchingThread = new PriceFetchingThread();
 			priceFetchingThread.start();
 		}
@@ -173,7 +174,7 @@ public abstract class AbstractPricing implements Pricing {
      * @throws java.io.IOException
      */
     protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-        if (logger.isDebugEnabled()) logger.debug("Fetching URL: " + url);
+        if (LOG.isDebugEnabled()) LOG.debug("Fetching URL: " + url);
         URLConnection urlCon = url.openConnection(options.getProxy());
         urlCon.setReadTimeout(180000); // 3 minute timeout.
         urlCon.setDoInput(true);
@@ -189,7 +190,7 @@ public abstract class AbstractPricing implements Pricing {
 
         Document d = DocumentHelper.parseText(sb.toString());
 
-        if (logger.isDebugEnabled()) logger.debug("Fetched URL");
+        if (LOG.isDebugEnabled()) LOG.debug("Fetched URL");
         return d;
     }
 
@@ -290,7 +291,7 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     private void notifyPricingListeners(Integer itemId) {
-        if (logger.isDebugEnabled()) logger.debug("notifying " + pricingListeners.size() + " listeners with " + itemId);
+        if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners with " + itemId);
         for (int i = pricingListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingListener> wpl = pricingListeners.get(i);
             PricingListener pl = wpl.get();
@@ -330,7 +331,7 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     private void notifyPricingFetchListeners(boolean started) {
-        if (logger.isDebugEnabled()) logger.debug("notifying " + pricingFetchListeners.size() + " fetch listeners. [" + started + "]");
+        if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingFetchListeners.size() + " fetch listeners. [" + started + "]");
         for (int i = pricingFetchListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingFetchListener> wpl = pricingFetchListeners.get(i);
             PricingFetchListener pl = wpl.get();
@@ -371,9 +372,10 @@ public abstract class AbstractPricing implements Pricing {
      */
     private void queuePrice(int itemID) {
         if (!waitingQueue.contains(itemID) && !currentlyEvaluating.contains(itemID) && checkFailureCountExceeded(itemID)) {
-            if (logger.isTraceEnabled()) logger.trace("queued " + itemID + " for price fetching");
+            if (LOG.isTraceEnabled()) LOG.trace("queued " + itemID + " for price fetching");
             waitingQueue.add(itemID);
         }
+		cancelAll = false;
         synchronized(priceFetchingThread) {
             priceFetchingThread.notify();
         }
@@ -400,11 +402,11 @@ public abstract class AbstractPricing implements Pricing {
 					cancelAll = false;
                     try {
                         synchronized(this) {
-                            if (logger.isDebugEnabled()) logger.debug("Pricing fetch thread is waiting.");
+                            if (LOG.isDebugEnabled()) LOG.debug("Pricing fetch thread is waiting.");
                             this.wait();
                         }
                     } catch (InterruptedException ie) {
-                        logger.warn("Pricing fetch thread interrupted.");
+                        LOG.warn("Pricing fetch thread interrupted.");
                         // just continue.
                     }
                 }
@@ -416,6 +418,8 @@ public abstract class AbstractPricing implements Pricing {
                     if (nextList != null) { //Next list
                         evaluate.addAll(nextList);
                     } else { //List is empty - do we need to do it again?
+						failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
+						/*
                         Set<Integer> tryAgain = new HashSet<Integer>();
                         for (int typeID : failed.getFullList()) {
                             addFailureCount(typeID);
@@ -434,6 +438,7 @@ public abstract class AbstractPricing implements Pricing {
                                 throw new RuntimeException("The impossible have happened!");
                             }
                         }
+						*/
                     }
                 }
                 // fill the queue that is waiting, up to the size of the batch size.
@@ -452,7 +457,7 @@ public abstract class AbstractPricing implements Pricing {
                 // 1 1 1     1
                 // ==> A & ((B & C) | C)
                 // ==> A & (B | C)
-                if (logger.isDebugEnabled()) logger.debug("There are " + waitingQueue.size() + " items in the queue.");
+                if (LOG.isDebugEnabled()) LOG.debug("There are " + waitingQueue.size() + " items in the queue.");
                 while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
                     Integer num = waitingQueue.remove();
                     if (checkFailureCountExceeded(num)) {
@@ -460,34 +465,38 @@ public abstract class AbstractPricing implements Pricing {
                         currentlyEvaluating.add(num);
                     }
                 }
-                if (logger.isDebugEnabled()) logger.debug("Starting price fetch for " + evaluate.size() + " items.");
+                if (LOG.isDebugEnabled()) LOG.debug("Starting price fetch for " + evaluate.size() + " items.");
                 // handle the list.
                 Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
                 // for each of the prices, cache, and notify listeners
-                boolean fail = false;
+                boolean doBinarySearch = false;
                 for (Integer itemId : evaluate) {
                     if (prices.containsKey(itemId)) {
                         PriceContainer priceContainer = prices.get(itemId);
                         cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
                         notifyPricingListeners(itemId);
                     } else {
-                        fail = true;
-                        waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
+						if (options.getUseBinaryErrorSearch()) {
+							doBinarySearch = true;
+						} else {
+							addFailureCount(itemId);
+							waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
+						}
                     }
                 }
-                if (fail && failed == null) { //Start new search for the error
+                if (doBinarySearch && failed == null) { //Start new search for the error
                     failed = new SplitList(evaluate);
                 }
-                if (!fail && failed != null) {
+                if (!doBinarySearch && failed != null) {
                     failed.removeLast();
                 }
                 evaluate.clear();
                 currentlyEvaluating.clear();
-                if (logger.isDebugEnabled()) logger.debug("finished fetch");
+                if (LOG.isDebugEnabled()) LOG.debug("finished fetch");
                 notifyPricingFetchListeners(false);
             }
 
-			logger.debug("Price Fetching Thread ending.");
+			LOG.debug("Price Fetching Thread ending.");
 			priceFetchingThread = null;
         }
 
@@ -505,10 +514,10 @@ public abstract class AbstractPricing implements Pricing {
     private void read(InputStream input) throws IOException, ClassNotFoundException {
         if (input != null) {
             ObjectInputStream oos = new ObjectInputStream(input);
-            cache = (Map<Integer, CachedPrice>)oos.readObject();
+            cache =  Collections.synchronizedMap((Map<Integer, CachedPrice>)oos.readObject());
         }
         if (cache == null) {
-            cache = new HashMap<Integer, CachedPrice>();
+            cache =  Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
         }
     }
 
@@ -528,8 +537,10 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void cancelAll() {
-		cancelAll = true;
-        waitingQueue.clear();
+		if (priceFetchingThread != null) {
+			cancelAll = true;
+			waitingQueue.clear();
+		}
     }
 
     @Override
@@ -538,6 +549,7 @@ public abstract class AbstractPricing implements Pricing {
         waitingQueue.clear();
         if (priceFetchingThread != null) {
             priceFetchingThread.interrupt();
+			priceFetchingThread = null;
         }
     }
 
@@ -586,7 +598,7 @@ public abstract class AbstractPricing implements Pricing {
 	}
 
 	protected void notifyFailedFetch(int itemID, Pricing pricing) {
-        if (logger.isDebugEnabled()) logger.debug("notifying " + pricingListeners.size() + " listeners. [" + itemID + "]");
+        if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners. [" + itemID + "]");
         for (int i = pricingListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingListener> wpl = pricingListeners.get(i);
             PricingListener pl = wpl.get();

@@ -13,10 +13,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingType;
 
@@ -25,7 +26,7 @@ import uk.me.candle.eve.pricing.options.PricingType;
  * @author Niklas
  */
 public abstract class AbstractPricingEasy extends AbstractPricing {
-    private static final Logger logger = Logger.getLogger(AbstractPricingEasy.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractPricingEasy.class);
 
     private URL url;
 
@@ -70,7 +71,7 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
 
     @Override
     protected final Map<Integer, PriceContainer> fetchPrices(Collection<Integer> itemIDs) {
-        logger.error("getting " + itemIDs.size() + " prices");
+        LOG.info("getting " + itemIDs.size() + " prices");
         Map<Integer, PriceContainer> returnMap = new HashMap<Integer, PriceContainer>();
         //System.out.println("failed: " + failed.size());
         url = null;
@@ -83,16 +84,16 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
             }
         } catch (SocketTimeoutException ste) {
             //Minor failure
-            logger.error("Timeout while fetching URL:" + url, ste);
-            logger.debug("Reducing the batch size by -1 from " + getBatchSize());
+            LOG.error("Timeout while fetching URL:" + url, ste);
+            LOG.debug("Reducing the batch size by -1 from " + getBatchSize());
             addFailureReasons(itemIDs, ste.getMessage());
         } catch (DocumentException de) {
             //Critical failure
-            logger.error("Error fetching price", de);
+            LOG.error("Error fetching price", de);
             addFailureReasons(itemIDs, de.getMessage());
         } catch (IOException ioe) {
             //Critical failure
-            logger.error("Error fetching price", ioe);
+            LOG.error("Error fetching price", ioe);
             addFailureReasons(itemIDs, ioe.getMessage());
         }
         return returnMap;

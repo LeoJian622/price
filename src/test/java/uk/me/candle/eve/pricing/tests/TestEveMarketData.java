@@ -16,6 +16,7 @@ import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveMarketData;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 // </editor-fold>
 /**
@@ -26,7 +27,7 @@ public class TestEveMarketData extends PricingTests {
 
     @Test
     public void testGetPriceOnlineRegion() {
-        Pricing pricing = PricingFactory.getPricing(new DummyPricingOptions() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
@@ -42,19 +43,65 @@ public class TestEveMarketData extends PricingTests {
         });
         testAll(pricing);
     }
+
+	@Test
+    public void testGetPriceOnlineSystem() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
+            @Override
+            public List<Long> getLocations() {
+                return Collections.singletonList(30000142L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.SYSTEM;
+            }
+            @Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVE_MARKETDATA;
+            }
+        });
+        testAll(pricing);
+    }
+
+    @Test
+    public void testGetPriceOnlineStation() {
+        Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
+            @Override
+            public List<Long> getLocations() {
+                return Collections.singletonList(60003760L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.STATION;
+            }
+            @Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVE_MARKETDATA;
+            }
+        });
+        testAll(pricing);
+    }
 	
     @Test
     public void testGetPriceFail() {
-        System.out.println("EveMarketData Fail Test");
-        final EveMarketData dummyPricing = new EveMarketDataEmptyDummy();
-        dummyPricing.setOptions(new DummyPricingOptions() {
+		System.out.println("Testing EVE_MARKETDATA errors");
+        final EveMarketData pricing = new EveMarketDataEmptyDummy();
+        pricing.setOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
-                return Collections.emptyList();
+                return Collections.singletonList(10000002L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.REGION;
+            }
+			@Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.EVE_MARKETDATA;
             }
         });
-        dummyPricing.setPrice(34, -1d);
-        Set<Integer> failed = synchronousPriceFetch(dummyPricing, 34);
+        pricing.setPrice(34, -1d);
+        Set<Integer> failed = synchronousPriceFetch(pricing, 34);
 		assertEquals(failed.size(), 1);
     }
 
