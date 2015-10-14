@@ -28,6 +28,15 @@ public interface Pricing {
      * @param number the style of number, min/max/mean/median
      * @return null if the price needs fetching or a Double representing the price.
      */
+    public Double getPriceCache(int itemID, PricingType type, PricingNumber number);
+
+    /**
+     *
+     * @param itemID
+     * @param type the type of price: buy price or sell price
+     * @param number the style of number, min/max/mean/median
+     * @return null if the price needs fetching or a Double representing the price.
+     */
     public Double getPrice(int itemID, PricingType type, PricingNumber number);
 
     public boolean removePricingListener(PricingListener o);

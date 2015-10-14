@@ -128,6 +128,16 @@ public abstract class AbstractPricing implements Pricing {
         return cache;
     }
 
+	@Override
+	public Double getPriceCache(int itemID, PricingType type, PricingNumber number) {
+		CachedPrice cp = createCache().get(itemID);
+		if (cp != null) {
+			return cp.getContainer().getPrice(type, number);
+		} else {
+			return null;
+		}
+	}
+
     @Override
     public Double getPrice(int itemID, PricingType type, PricingNumber number) {
 		if (priceFetchingThread == null) {
@@ -137,20 +147,17 @@ public abstract class AbstractPricing implements Pricing {
 		}
 
         CachedPrice cp = createCache().get(itemID);
-        double price;
         // Queue the price for fetching, if: we do not have a cached price
         // If we have a cached price, then queue the fetch only if the
         // cache timers are enabled.
-        boolean cpDoesNotExists = cp == null;
         boolean cacheTimout = cp != null && (cp.getTime()+cacheTimer) < System.currentTimeMillis();
-        boolean useCaches = options.getCacheTimersEnabled();
-        if (cpDoesNotExists || ( useCaches && cacheTimout )) {
+        if (cp == null //DoesNotExists
+				|| (options.getCacheTimersEnabled() && cacheTimout)) {
             queuePrice(itemID);
             return null;
         } else {
-            price = cp.getContainer().getPrice(type, number);
+            return cp.getContainer().getPrice(type, number);
         }
-        return price;
     }
 
     @Override
