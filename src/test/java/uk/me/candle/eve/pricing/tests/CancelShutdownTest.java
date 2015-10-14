@@ -10,6 +10,7 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
@@ -24,142 +25,15 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
  */
 public class CancelShutdownTest extends PricingTests {
 	boolean ended;
+	private static Pricing pricing;
 
 	private CancelShutdownTest getThis() {
 		return this;
 	}
 
-	@Before
-	public void setUp() { }
-
-    @Test
-    public void testCancel() {
-		System.out.println("Testing cancel recovery (fast)");
-		Container container = startThread(true);
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		container.getPricing().cancelAll(); //Cancel price fetch
-		container.getListener().interrupt(); //Stop thread
-		container = startThread(false);
-		try {
-			container.getListener().join();
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		assertTrue(container.getListener().getFailed().isEmpty());
-	}
-
-    @Test
-    public void testCancelSlow() {
-		System.out.println("Testing cancel recovery (slow)");
-		Container container = startThread(true);
-		ended = false;
-		container.getPricing().addPricingFetchListener(new PricingFetchListener() {
-			@Override
-			public void fetchStarted() {
-				
-			}
-			@Override
-			public void fetchEnded() {
-				ended = true;
-				synchronized(getThis()){
-					getThis().notify();
-				}
-			}
-		});
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		container.getPricing().cancelAll(); //Cancel price fetch
-		container.getListener().interrupt(); //Stop thread
-		while(!ended) {
-			try {
-				synchronized(getThis()){
-					getThis().wait();
-				}
-			} catch (InterruptedException ex) {
-				break;
-			}
-		}
-		container = startThread(false);
-		try {
-			container.getListener().join();
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		assertTrue(container.getListener().getFailed().isEmpty());
-	}
-
-    @Test
-    public void testShutdown() {
-		System.out.println("Testing shutdown recovery (fast)");
-		Container container = startThread(true);
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		container.getPricing().shutdown();
-		container.getListener().interrupt(); //Stop thread
-		container = startThread(false);
-		try {
-			container.getListener().join();
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		assertTrue(container.getListener().getFailed().isEmpty());
-	}
-
-    @Test
-    public void testShutdownSlow() {
-		System.out.println("Testing shutdown recovery (slow)");
-		Container container = startThread(true);
-		ended = false;
-		container.getPricing().addPricingFetchListener(new PricingFetchListener() {
-			@Override
-			public void fetchStarted() {
-				
-			}
-			@Override
-			public void fetchEnded() {
-				ended = true;
-				synchronized(getThis()){
-					getThis().notify();
-				}
-			}
-		});
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		container.getPricing().shutdown();
-		container.getListener().interrupt(); //Stop thread
-		while(!ended) {
-			try {
-				synchronized(getThis()){
-					getThis().wait();
-				}
-			} catch (InterruptedException ex) {
-				break;
-			}
-		}
-		container = startThread(false);
-		try {
-			container.getListener().join();
-		} catch (InterruptedException ex) {
-			fail("Thread interrupted");
-		}
-		assertTrue(container.getListener().getFailed().isEmpty());
-	}
-
-	private Container startThread(boolean all) {
-		Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
+	@BeforeClass
+	public static void setUpClass() {
+		pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
@@ -173,27 +47,136 @@ public class CancelShutdownTest extends PricingTests {
                 return PricingFetch.EVE_MARKETDATA;
             }
         });
-		SynchronousPriceListener listener = new SynchronousPriceListener(pricing, getTypeIDs(all));
-		Container container = new Container(listener, pricing);
-		listener.start();
-		return container;
 	}
 
-	private static class Container {
-		private final SynchronousPriceListener listener;
-		private final Pricing pricing;
+	@Before
+	public void setUp() {
+		
+	
+	}
 
-		public Container(SynchronousPriceListener listener, Pricing pricing) {
-			this.listener = listener;
-			this.pricing = pricing;
+    @Test
+    public void testCancel() {
+		System.out.println("Testing cancel recovery (fast)");
+		SynchronousPriceListener listener = startThread(true);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
 		}
-
-		public SynchronousPriceListener getListener() {
-			return listener;
+		pricing.cancelAll(); //Cancel price fetch
+		listener.interrupt(); //Stop thread
+		listener = startThread(false);
+		try {
+			listener.join();
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
 		}
+		assertTrue(listener.getFailed().isEmpty());
+	}
 
-		public Pricing getPricing() {
-			return pricing;
+    @Test
+    public void testCancelSlow() {
+		System.out.println("Testing cancel recovery (slow)");
+		ended = false;
+		FetchListener fetchListener = new FetchListener();
+		pricing.addPricingFetchListener(fetchListener);
+		SynchronousPriceListener listener = startThread(true);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		pricing.cancelAll(); //Cancel price fetch
+		listener.interrupt(); //Stop thread
+		while(!ended) {
+			try {
+				synchronized(getThis()){
+					getThis().wait();
+				}
+			} catch (InterruptedException ex) {
+				break;
+			}
+		}
+		pricing.removePricingFetchListener(fetchListener);
+		listener = startThread(false);
+		try {
+			listener.join();
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		assertTrue(listener.getFailed().isEmpty());
+	}
+
+    @Test
+    public void testShutdown() {
+		System.out.println("Testing shutdown recovery (fast)");
+		SynchronousPriceListener listener = startThread(true);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		pricing.shutdown();
+		listener.interrupt(); //Stop thread
+		listener = startThread(false);
+		try {
+			listener.join();
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		assertTrue(listener.getFailed().isEmpty());
+	}
+
+    @Test
+    public void testShutdownSlow() {
+		System.out.println("Testing shutdown recovery (slow)");
+		FetchListener fetchListener = new FetchListener();
+		pricing.addPricingFetchListener(fetchListener);
+		SynchronousPriceListener listener = startThread(true);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		pricing.shutdown();
+		listener.interrupt(); //Stop thread
+		while(!ended) {
+			try {
+				synchronized(getThis()){
+					getThis().wait();
+				}
+			} catch (InterruptedException ex) {
+				break;
+			}
+		}
+		pricing.removePricingFetchListener(fetchListener);
+		listener = startThread(false);
+		try {
+			listener.join();
+		} catch (InterruptedException ex) {
+			fail("Thread interrupted");
+		}
+		assertTrue(listener.getFailed().isEmpty());
+	}
+
+	private SynchronousPriceListener startThread(boolean all) {
+		SynchronousPriceListener listener = new SynchronousPriceListener(pricing, getTypeIDs(all));
+		listener.start();
+		return listener;
+	}
+
+	private class FetchListener implements PricingFetchListener {
+		@Override
+		public void fetchStarted() {
+			ended = false;
+		}
+		@Override
+		public void fetchEnded() {
+			ended = true;
+			synchronized(getThis()){
+				getThis().notify();
+			}
 		}
 	}
 }
