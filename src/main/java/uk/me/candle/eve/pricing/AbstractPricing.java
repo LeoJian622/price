@@ -426,26 +426,6 @@ public abstract class AbstractPricing implements Pricing {
                         evaluate.addAll(nextList);
                     } else { //List is empty - do we need to do it again?
 						failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
-						/*
-                        Set<Integer> tryAgain = new HashSet<Integer>();
-                        for (int typeID : failed.getFullList()) {
-                            addFailureCount(typeID);
-                            if (checkFailureCountExceeded(typeID)) {
-                                tryAgain.add(typeID);
-                            }
-                        }
-                        if (tryAgain.isEmpty()) {
-                            failed = null; //All done o/
-                        } else {
-                            failed = new SplitList(tryAgain); //again say the monkey!
-                            nextList = failed.getNextList();
-                            if (nextList != null) {
-                                evaluate.addAll(nextList);
-                            } else {
-                                throw new RuntimeException("The impossible have happened!");
-                            }
-                        }
-						*/
                     }
                 }
                 // fill the queue that is waiting, up to the size of the batch size.
@@ -484,7 +464,12 @@ public abstract class AbstractPricing implements Pricing {
                         notifyPricingListeners(itemId);
                     } else {
 						if (options.getUseBinaryErrorSearch()) {
-							doBinarySearch = true;
+							if (evaluate.size() == 1) {
+								notifyFailedFetch(itemId);
+							} else {
+								//New Search
+								doBinarySearch = true;
+							}
 						} else {
 							addFailureCount(itemId);
 							waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
@@ -600,11 +585,11 @@ public abstract class AbstractPricing implements Pricing {
 	protected void addFailureCount(int itemID) {
 		int i = fetchAttemptCount(itemID).incrementAndGet();
 		if (i >= options.getAttemptCount()) {
-			notifyFailedFetch(itemID, this);
+			notifyFailedFetch(itemID);
 		}
 	}
 
-	protected void notifyFailedFetch(int itemID, Pricing pricing) {
+	protected void notifyFailedFetch(int itemID) {
         if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners. [" + itemID + "]");
         for (int i = pricingListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingListener> wpl = pricingListeners.get(i);
@@ -612,7 +597,7 @@ public abstract class AbstractPricing implements Pricing {
             if (pl == null) {
                 pricingListeners.remove(i);
             } else {
-                pl.priceUpdateFailed(itemID, pricing);
+                pl.priceUpdateFailed(itemID, this);
             }
         }
 	}
