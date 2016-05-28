@@ -1,28 +1,28 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>uk.me.candle</groupId>
-    <artifactId>pricing</artifactId>
-    <packaging>jar</packaging>
-    <version>1.4.0</version>
-    <name>pricing</name>
-    <url>http://maven.apache.org</url>
-    <distributionManagement>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>uk.me.candle</groupId>
+	<artifactId>pricing</artifactId>
+	<packaging>jar</packaging>
+	<version>1.5.1</version>
+	<name>pricing</name>
+	<url>http://maven.apache.org</url>
+	<distributionManagement>
 		<repository>
 			<id>nikr-maven-repository</id>
 			<url>ftp://maven.nikr.net/maven.nikr.net</url>
 		</repository>
 	</distributionManagement>
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
 			<plugin>
 				<artifactId>maven-antrun-plugin</artifactId>
 				<version>1.7</version>
@@ -42,8 +42,8 @@
 					</execution>
 				</executions>
 			</plugin>
-        </plugins>
-        <extensions>
+		</plugins>
+		<extensions>
 			<!-- Enabling the use of FTP -->
 			<extension>
 				<groupId>org.apache.maven.wagon</groupId>
@@ -51,14 +51,19 @@
 				<version>2.5</version>
 			</extension>
 		</extensions>
-    </build>
-    <dependencies>
-        <dependency>
-            <groupId>jaxen</groupId>
-            <artifactId>jaxen</artifactId>
-            <version>1.1.1</version>
-        </dependency>
-       <dependency>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>jaxen</groupId>
+			<artifactId>jaxen</artifactId>
+			<version>1.1.6</version>
+		</dependency>
+		<dependency>
+			<groupId>dom4j</groupId>
+			<artifactId>dom4j</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
 			<version>1.1.1</version>
@@ -95,18 +100,21 @@
 			<version>1.2.16</version>
 			<!--<scope>runtime</scope>-->
 		</dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.7</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.7</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
 
-    <scm>
-         <connection>scm:svn:http://svn.candle.me.uk/eve/pricing/trunk</connection>
-         <url>http://svn.candle.me.uk/eve/pricing/trunk</url>
-    </scm>
+	<scm>
+		<connection>scm:svn:http://svn.candle.me.uk/eve/pricing/trunk</connection>
+		<url>http://svn.candle.me.uk/eve/pricing/trunk</url>
+	</scm>
+	<properties>
+		<maven.javadoc.skip>true</maven.javadoc.skip>
+	</properties>
 </project>
 
 
