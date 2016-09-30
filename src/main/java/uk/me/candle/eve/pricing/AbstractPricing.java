@@ -44,6 +44,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPInputStream;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
@@ -202,9 +203,16 @@ public abstract class AbstractPricing implements Pricing {
         URLConnection urlCon = url.openConnection(options.getProxy());
         urlCon.setReadTimeout(180000); // 3 minute timeout.
         urlCon.setDoInput(true);
-        //urlCon.setRequestProperty("User-Agent", "uk.me.candle.eve.pricing : Java Pricing");
+		urlCon.setRequestProperty("Accept-Encoding", "gzip");
 
-        BufferedReader br = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+		InputStream in;
+		if ("gzip".equals(urlCon.getContentEncoding())) {
+			in = new GZIPInputStream(urlCon.getInputStream());
+		} else {
+			in = urlCon.getInputStream();
+		}
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(in));
         StringBuilder sb = new StringBuilder();
         String line;
         while (null != (line = br.readLine())) {
