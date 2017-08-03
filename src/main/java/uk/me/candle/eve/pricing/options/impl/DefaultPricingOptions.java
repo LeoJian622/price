@@ -86,7 +86,7 @@ public class DefaultPricingOptions implements PricingOptions {
 
     @Override
     public Proxy getProxy() {
-        return Proxy.NO_PROXY;
+        return null;
     }
 
     @Override

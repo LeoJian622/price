@@ -61,7 +61,7 @@ public interface PricingOptions {
     public boolean getCacheTimersEnabled();
 
     /**
-     * return the proxy needed to get a connection.
+     * return the proxy needed to get a connection or null
      * @return the proxy used for connections.
      */
     public Proxy getProxy();
