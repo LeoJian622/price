@@ -78,10 +78,12 @@ public class EveMarketData extends AbstractPricingEasy {
 
         if (getPricingOptions().getLocationType() == LocationType.STATION //Station
 			&& !getPricingOptions().getLocations().isEmpty()) { //Not empty
+			if (query.length() > 0) query.append('&');
             query.append("station_ids=");
             query.append(getPricingOptions().getLocations().get(0));
         } else if (getPricingOptions().getLocationType() == LocationType.SYSTEM //System
 			&& !getPricingOptions().getLocations().isEmpty()) { //Not empty
+			if (query.length() > 0) query.append('&');
 			query.append("solarsystem_ids=");
             query.append(getPricingOptions().getLocations().get(0));
         } else if (getPricingOptions().getLocationType() == LocationType.REGION
@@ -89,9 +91,8 @@ public class EveMarketData extends AbstractPricingEasy {
             if (query.length() > 0) query.append('&');
             query.append("region_ids=");
             query.append(getPricingOptions().getLocations().get(0));
-            
         }
 
-        return new URL("http://api.eve-marketdata.com/api/item_prices2.xml?char_name=Golden%20Gnu&buysell=a" + query.toString());
+        return new URL("https://api.eve-marketdata.com/api/item_prices2.xml?char_name=Golden%20Gnu&buysell=a" + query.toString());
     }
 }
