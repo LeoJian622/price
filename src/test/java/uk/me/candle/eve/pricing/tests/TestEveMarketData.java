@@ -20,6 +20,8 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
@@ -28,7 +30,6 @@ import java.util.List;
 import java.util.Set;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
-import static org.junit.Assert.*;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
@@ -99,8 +100,8 @@ public class TestEveMarketData extends PricingTests {
         });
         testAll(pricing);
     }
-	
-    @Test
+
+	@Test
     public void testGetPriceFail() {
 		System.out.println("Testing EVE_MARKETDATA errors");
         final EveMarketData pricing = new EveMarketDataEmptyDummy();

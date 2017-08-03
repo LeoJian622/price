@@ -20,10 +20,11 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
-import java.util.Collections;
-import java.util.List;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import java.util.Collections;
+import java.util.List;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -45,6 +46,7 @@ public class CancelShutdownTest extends PricingTests {
 
 	@BeforeClass
 	public static void setUpClass() {
+		PricingTests.setUpClass();
 		pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
@@ -56,7 +58,7 @@ public class CancelShutdownTest extends PricingTests {
             }
             @Override
             public PricingFetch getPricingFetchImplementation() {
-                return PricingFetch.EVE_MARKETDATA;
+                return PricingFetch.EVE_CENTRAL;
             }
         });
 	}
@@ -70,7 +72,7 @@ public class CancelShutdownTest extends PricingTests {
     @Test
     public void testCancel() {
 		System.out.println("Testing cancel recovery (fast)");
-		SynchronousPriceListener listener = startThread(true);
+		SynchronousPriceListener listener = startThread();
 		try {
 			Thread.sleep(2000);
 		} catch (InterruptedException ex) {
@@ -78,7 +80,7 @@ public class CancelShutdownTest extends PricingTests {
 		}
 		pricing.cancelAll(); //Cancel price fetch
 		listener.interrupt(); //Stop thread
-		listener = startThread(false);
+		listener = startThread();
 		try {
 			listener.join();
 		} catch (InterruptedException ex) {
@@ -93,7 +95,7 @@ public class CancelShutdownTest extends PricingTests {
 		ended = false;
 		FetchListener fetchListener = new FetchListener();
 		pricing.addPricingFetchListener(fetchListener);
-		SynchronousPriceListener listener = startThread(true);
+		SynchronousPriceListener listener = startThread();
 		try {
 			Thread.sleep(2000);
 		} catch (InterruptedException ex) {
@@ -111,7 +113,7 @@ public class CancelShutdownTest extends PricingTests {
 			}
 		}
 		pricing.removePricingFetchListener(fetchListener);
-		listener = startThread(false);
+		listener = startThread();
 		try {
 			listener.join();
 		} catch (InterruptedException ex) {
@@ -123,7 +125,7 @@ public class CancelShutdownTest extends PricingTests {
     @Test
     public void testShutdown() {
 		System.out.println("Testing shutdown recovery (fast)");
-		SynchronousPriceListener listener = startThread(true);
+		SynchronousPriceListener listener = startThread();
 		try {
 			Thread.sleep(2000);
 		} catch (InterruptedException ex) {
@@ -131,7 +133,7 @@ public class CancelShutdownTest extends PricingTests {
 		}
 		pricing.shutdown();
 		listener.interrupt(); //Stop thread
-		listener = startThread(false);
+		listener = startThread();
 		try {
 			listener.join();
 		} catch (InterruptedException ex) {
@@ -145,7 +147,7 @@ public class CancelShutdownTest extends PricingTests {
 		System.out.println("Testing shutdown recovery (slow)");
 		FetchListener fetchListener = new FetchListener();
 		pricing.addPricingFetchListener(fetchListener);
-		SynchronousPriceListener listener = startThread(true);
+		SynchronousPriceListener listener = startThread();
 		try {
 			Thread.sleep(2000);
 		} catch (InterruptedException ex) {
@@ -163,7 +165,7 @@ public class CancelShutdownTest extends PricingTests {
 			}
 		}
 		pricing.removePricingFetchListener(fetchListener);
-		listener = startThread(false);
+		listener = startThread();
 		try {
 			listener.join();
 		} catch (InterruptedException ex) {
@@ -172,8 +174,8 @@ public class CancelShutdownTest extends PricingTests {
 		assertTrue(listener.getFailed().isEmpty());
 	}
 
-	private SynchronousPriceListener startThread(boolean all) {
-		SynchronousPriceListener listener = new SynchronousPriceListener(pricing, getTypeIDs(all));
+	private SynchronousPriceListener startThread() {
+		SynchronousPriceListener listener = new SynchronousPriceListener(pricing, getTypeIDs());
 		listener.start();
 		return listener;
 	}

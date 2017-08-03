@@ -20,6 +20,8 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
+import static org.junit.Assert.*;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -27,7 +29,6 @@ import java.util.Set;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
-import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingListener;
@@ -45,6 +46,7 @@ public class PricingTests {
 
 	@BeforeClass
 	public static void setUpClass() {
+		System.setProperty("http.agent", "Price");
 		Logger.getRootLogger().setLevel(Level.OFF);
 		//Logger.getRootLogger().setLevel(Level.INFO);
 		//Logger.getRootLogger().setLevel(Level.DEBUG);
@@ -66,7 +68,8 @@ public class PricingTests {
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, Set<Integer> typeIDs) {
         SynchronousPriceListener listener = new SynchronousPriceListener(pricing, typeIDs);
-		return listener.doStuff();
+		listener.doStuff();
+		return listener.getFailed();
     }
 
     protected class SynchronousPriceListener extends Thread implements PricingListener {
@@ -78,10 +81,10 @@ public class PricingTests {
 
 		public SynchronousPriceListener(Pricing pricing, Set<Integer> typeIDs) {
 			this.pricing = pricing;
-			this.typeIDs = typeIDs;
-			this.queue = new HashSet<Integer>(typeIDs);
-			ok = new HashSet<Integer>();
-			failed = new HashSet<Integer>();
+			this.typeIDs = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
+			this.queue = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
+			this.ok = Collections.synchronizedSet(new HashSet<Integer>());
+			this.failed = Collections.synchronizedSet(new HashSet<Integer>());
 		}
 
 		public Set<Integer> getFailed() {
@@ -93,9 +96,8 @@ public class PricingTests {
 			doStuff();
         }
 
-		public Set<Integer> doStuff() {
-			getQueue().addAll(typeIDs);
-            //clear prices
+		public void doStuff() {
+			//clear prices
             for (int typeID : typeIDs) {
                 pricing.setPrice(typeID, -1d);
             }
@@ -104,8 +106,7 @@ public class PricingTests {
             for (int typeID : typeIDs) {
                 getPrice(pricing, typeID);
             }
-			int progress = 0;
-            while (!getQueue().isEmpty()) {
+            while (!queue.isEmpty()) {
                 try {
                     synchronized(this) {
                         wait(); // this is notified in the SynchronousPriceListener2
@@ -115,24 +116,9 @@ public class PricingTests {
                 } catch (InterruptedException ie) {
                     break;
                 }
-				int percent = (int)((typeIDs.size() - getQueue().size()) * 100.0 / typeIDs.size());
-				if (progress != percent) {
-					for (int i = progress; i < percent; i++) {
-						System.out.print(".");
-					}
-					progress = percent;
-				}
             }
-			for (int i = 0; i < progress; i++) { //The rest
-				System.out.print("\b");
-			}
             pricing.removePricingListener(this);
-			return failed;
-		}
-
-		public synchronized Set<Integer> getQueue() {
-			return queue;
-		}
+        }
 
         private void getPrice(Pricing pricing, int typeID) {
             boolean done = true;
@@ -156,18 +142,18 @@ public class PricingTests {
         @Override
         public void priceUpdated(int typeID, Pricing pricing) {
             getPrice(pricing, typeID);
-			getQueue().remove(typeID);
+			queue.remove(typeID);
             synchronized(this) {
-                notify();
+                notifyAll();
             }
         }
 
         @Override
         public void priceUpdateFailed(int typeID, Pricing pricing) {
             failed.add(typeID);
-			getQueue().remove(typeID);
+			queue.remove(typeID);
             synchronized(this) {
-                notify();
+                notifyAll();
             }
         }
     }
@@ -185,22 +171,14 @@ public class PricingTests {
         
         //will be zero:
         long time = System.currentTimeMillis();
-		Set<Integer> typeIDs = getTypeIDs(ALL);
+		Set<Integer> typeIDs = getTypeIDs();
         Set<Integer> failed = synchronousPriceFetch(pricing, typeIDs);
         System.out.println("    " + (typeIDs.size() - failed.size()) + " of " + typeIDs.size() + " done - " + failed.size() + " failed - completed in " + formatTime(System.currentTimeMillis() - time));
-		/*
-        if (!failed.isEmpty()) {
-            System.out.println("        Failed:");
-            for (Integer typeID : failed) {
-                System.out.println("        " + typeID);
-            }
-        }
-		*/
         assertTrue(failed.isEmpty());
     }
 
-	protected Set<Integer> getTypeIDs(boolean all) {
-		if (all) {
+	protected Set<Integer> getTypeIDs() {
+		if (ALL) {
 			if (typeAll == null) {
 				typeAll = new HashSet<Integer>();
 				Map<Integer, Item> items = null;
