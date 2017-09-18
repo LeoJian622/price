@@ -270,6 +270,15 @@ public abstract class AbstractPricing implements Pricing {
         this.cacheTimer = cacheTimer;
     }
 
+	@Override
+	public void resetCache(int itemID) {
+		CachedPrice current = createCache().get(itemID);
+		if (current == null) {
+			return; //Nothing to set
+		}
+		createCache().put(itemID, new CachedPrice(-1, current.getContainer().createClone().build()));
+	}
+
     @Override
     public void setPrice(int itemID, PricingType type, PricingNumber number, Double price) {
         long cacheTime;

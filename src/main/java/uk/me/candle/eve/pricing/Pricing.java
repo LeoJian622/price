@@ -62,6 +62,12 @@ public interface Pricing {
     public boolean removePricingFetchListener(PricingFetchListener o);
     public boolean addPricingFetchListener(PricingFetchListener pfl);
 
+	/**
+	 * Reset the cache time on item
+	 * @param itemID 
+	 */
+	public void resetCache(int itemID);
+
     /**
      * to unset a price, and queue it for fetching again, set the price to negative.
      * @param itemID
