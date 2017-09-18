@@ -110,6 +110,6 @@ public class EveCentral extends AbstractPricingEasy {
         //Max order age
         query.append("&hours=96");
 
-        return new URL("http://api.eve-central.com/api/marketstat?" + query.toString());
+        return new URL("https://api.eve-central.com/api/marketstat?" + query.toString());
     }
 }
