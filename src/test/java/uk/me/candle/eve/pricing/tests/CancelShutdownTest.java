@@ -39,6 +39,7 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 public class CancelShutdownTest extends PricingTests {
 	boolean ended;
 	private static Pricing pricing;
+	private static final long DELAY = 500;
 
 	private CancelShutdownTest getThis() {
 		return this;
@@ -58,8 +59,12 @@ public class CancelShutdownTest extends PricingTests {
             }
             @Override
             public PricingFetch getPricingFetchImplementation() {
-                return PricingFetch.EVE_CENTRAL;
+                return PricingFetch.EVE_MARKETDATA;
             }
+			@Override
+			public int getAttemptCount() {
+				return 1;
+			}
         });
 	}
 
@@ -74,7 +79,7 @@ public class CancelShutdownTest extends PricingTests {
 		System.out.println("Testing cancel recovery (fast)");
 		SynchronousPriceListener listener = startThread();
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(DELAY);
 		} catch (InterruptedException ex) {
 			fail("Thread interrupted");
 		}
@@ -97,7 +102,7 @@ public class CancelShutdownTest extends PricingTests {
 		pricing.addPricingFetchListener(fetchListener);
 		SynchronousPriceListener listener = startThread();
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(DELAY);
 		} catch (InterruptedException ex) {
 			fail("Thread interrupted");
 		}
@@ -127,7 +132,7 @@ public class CancelShutdownTest extends PricingTests {
 		System.out.println("Testing shutdown recovery (fast)");
 		SynchronousPriceListener listener = startThread();
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(DELAY);
 		} catch (InterruptedException ex) {
 			fail("Thread interrupted");
 		}
@@ -149,7 +154,7 @@ public class CancelShutdownTest extends PricingTests {
 		pricing.addPricingFetchListener(fetchListener);
 		SynchronousPriceListener listener = startThread();
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(DELAY);
 		} catch (InterruptedException ex) {
 			fail("Thread interrupted");
 		}

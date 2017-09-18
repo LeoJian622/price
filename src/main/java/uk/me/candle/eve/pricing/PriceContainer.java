@@ -29,7 +29,7 @@ import uk.me.candle.eve.pricing.options.PricingType;
 public class PriceContainer implements java.io.Serializable {
     private static final long serialVersionUID = 1l;
 
-    private Map<PricingType, Map<PricingNumber, Double>> prices;
+    private final Map<PricingType, Map<PricingNumber, Double>> prices;
 
     private PriceContainer(Map<PricingType, Map<PricingNumber, Double>> prices) {
         this.prices = prices;
@@ -83,8 +83,11 @@ public class PriceContainer implements java.io.Serializable {
         }
 
         public PriceContainer build() {
-            // XXX TODO check that the map contains everything.
-            return new PriceContainer(pricesTemp);
+            if (pricesTemp.isEmpty()) {
+				return null;
+			} else {
+				return new PriceContainer(pricesTemp);
+			}
         }
     }
 }

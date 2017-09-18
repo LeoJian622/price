@@ -46,32 +46,31 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
 
     abstract protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number);
 
-    private PriceContainer extractPrice(Document d, Integer typeID) {
-        if (d == null) {
-            //throw new RuntimeException("Document == null >> typeID: " + typeID + "\n@" + url);
-        }
+    private PriceContainer extractPrice(Document d, Integer typeID) throws DocumentException {
+		if (d == null) {
+			throw new DocumentException("Document is null");
+		}
         PriceContainer.PriceContainerBuilder builder = new PriceContainer.PriceContainerBuilder();
         for (PricingType type : PricingType.values()) {
             for (PricingNumber number : PricingNumber.values()) {
                 Node node = getNode(d, typeID, type, number);
-                if (node == null) {
-                    //throw new RuntimeException("Node == null >> typeID: " + typeID + " Type: " + type.name() + " Number:" + number + "\n@" + url);
-                }
-                Double price = getNodeValue(node);
-                builder.putPrice(type, number, price);
+				Double price = getNodeValue(node);
+				if (price != null) {
+					builder.putPrice(type, number, price);
+				}
             }
         }
         return builder.build();
     }
 
-    private double getNodeValue(Node node) {
+    private Double getNodeValue(Node node) {
         if (node == null) {
-            return 0.0;
+            return null;
         }
         try {
             return Double.valueOf(node.getStringValue()); //Sometimes return null
         } catch (NumberFormatException ex){
-            return 0.0;
+            return null;
         }
     }
 
@@ -91,7 +90,9 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
             Document d = getDocument(url);
             for (Integer i : itemIDs) {
                 PriceContainer price = extractPrice(d, i);
-                returnMap.put(i, price);
+				if (price != null) {
+					returnMap.put(i, price);
+				}
             }
         } catch (SocketTimeoutException ste) {
             //Minor failure
