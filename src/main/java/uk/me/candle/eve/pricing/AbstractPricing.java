@@ -20,6 +20,7 @@
  */
 package uk.me.candle.eve.pricing;
 
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,16 +41,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingOptions;
 import uk.me.candle.eve.pricing.options.PricingType;
@@ -90,7 +96,7 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * single thread that handles the price fetching.
      */
-    private PriceFetchingThread priceFetchingThread;
+    private final List<PriceFetchingThread> priceFetchingThreads = Collections.synchronizedList(new ArrayList<PriceFetchingThread>());
 
     /**
      * maintains the list of failed attempts to fetch prices.
@@ -108,24 +114,18 @@ public abstract class AbstractPricing implements Pricing {
     long cacheTimer = 60*60*1000l;
 
     /**
-     * If this is true then the fetching thread will exit.
-     */
-    private boolean shuttingDown = false;
-
-    /**
-     * If this is true then the fetch thread will stop fetching when it next
-     * hits a check on it. Should help to fix
-     * http://code.google.com/p/jeveassets/issues/detail?id=130
-     */
-    private boolean cancelAll = false;
-
-    /**
      * defines some options.
      */
     PricingOptions options;
     // </editor-fold>
 
-    public AbstractPricing() { }
+    public AbstractPricing() {
+        for (int i = 1; i <= 1; i++) {
+            PriceFetchingThread priceFetchingThread = new PriceFetchingThread(i);
+            priceFetchingThreads.add(priceFetchingThread);
+            priceFetchingThread.start();
+        }
+    }
     
     //@NotNull
     private Map<Integer, CachedPrice> createCache() {
@@ -159,12 +159,6 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public Double getPrice(int itemID, PricingType type, PricingNumber number) {
-        if (priceFetchingThread == null) {
-            shuttingDown = false;
-            priceFetchingThread = new PriceFetchingThread();
-            priceFetchingThread.start();
-        }
-
         CachedPrice cp = createCache().get(itemID);
         // Queue the price for fetching, if: we do not have a cached price
         // If we have a cached price, then queue the fetch only if the
@@ -180,15 +174,20 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     @Override
+    public Double getPrice(int itemID) {
+        return getPrice(itemID, options.getPricingType(), options.getPricingNumber());
+    }
+
+    @Override
+    public void updatePrices(Set<Integer> itemIDs) {
+        queuePrices(itemIDs);
+    }
+
+    @Override
     public long getNextUpdateTime(int itemID) {
         CachedPrice cp = createCache().get(itemID);
         if (cp == null) return -1; // needs an update.
         return cp.getTime();
-    }
-
-    @Override
-    public Double getPrice(int itemID) {
-        return getPrice(itemID, options.getPricingType(), options.getPricingNumber());
     }
 
     /**
@@ -200,26 +199,7 @@ public abstract class AbstractPricing implements Pricing {
      * @throws java.io.IOException
      */
     protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-        if (LOG.isDebugEnabled()) LOG.debug("Fetching URL: " + url);
-        Proxy proxy = options.getProxy();
-        URLConnection urlCon;
-        if (proxy != null) {
-            urlCon = url.openConnection(proxy);
-        } else {
-            urlCon = url.openConnection();
-        }
-        urlCon.setReadTimeout(180000); // 3 minute timeout.
-        urlCon.setDoInput(true);
-        urlCon.setRequestProperty("Accept-Encoding", "gzip");
-
-        InputStream in;
-        if ("gzip".equals(urlCon.getContentEncoding())) {
-            in = new GZIPInputStream(urlCon.getInputStream());
-        } else {
-            in = urlCon.getInputStream();
-        }
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(in));
+        BufferedReader br = new BufferedReader(new InputStreamReader(getInputStream(url)));
         StringBuilder sb = new StringBuilder();
         String line;
         while (null != (line = br.readLine())) {
@@ -231,6 +211,30 @@ public abstract class AbstractPricing implements Pricing {
 
         if (LOG.isDebugEnabled()) LOG.debug("Fetched URL");
         return d;
+    }
+
+    protected Element getElement(URL url) throws SocketTimeoutException, DocumentException, IOException, ParserConfigurationException, SAXException {
+        return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(getInputStream(url)).getDocumentElement();
+    }
+
+    protected InputStream getInputStream(URL url) throws SocketTimeoutException, DocumentException, IOException {
+        if (LOG.isDebugEnabled()) LOG.debug("Fetching URL: " + url);
+        Proxy proxy = options.getProxy();
+        URLConnection urlCon;
+        if (proxy != null) {
+            urlCon = url.openConnection(proxy);
+        } else {
+            urlCon = url.openConnection();
+        }
+        urlCon.setReadTimeout(45000); //45 seconds
+        urlCon.setDoInput(true);
+        urlCon.setRequestProperty("Accept-Encoding", "gzip");
+
+        if ("gzip".equals(urlCon.getContentEncoding())) {
+            return new GZIPInputStream(urlCon.getInputStream());
+        } else {
+            return urlCon.getInputStream();
+        }
     }
 
     @Override
@@ -269,15 +273,6 @@ public abstract class AbstractPricing implements Pricing {
     public void setCacheTimer(long cacheTimer) {
         this.cacheTimer = cacheTimer;
     }
-
-	@Override
-	public void resetCache(int itemID) {
-		CachedPrice current = createCache().get(itemID);
-		if (current == null) {
-			return; //Nothing to set
-		}
-		createCache().put(itemID, new CachedPrice(-1, current.getContainer().createClone().build()));
-	}
 
     @Override
     public void setPrice(int itemID, PricingType type, PricingNumber number, Double price) {
@@ -339,7 +334,7 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     private void notifyPricingListeners(Integer itemId) {
-        if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners with " + itemId);
+        //if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners with " + itemId);
         for (int i = pricingListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingListener> wpl = pricingListeners.get(i);
             PricingListener pl = wpl.get();
@@ -419,13 +414,20 @@ public abstract class AbstractPricing implements Pricing {
      * @param itemID
      */
     private void queuePrice(int itemID) {
-        if (!waitingQueue.contains(itemID) && !currentlyEvaluating.contains(itemID) && checkFailureCountExceeded(itemID)) {
-            if (LOG.isTraceEnabled()) LOG.trace("queued " + itemID + " for price fetching");
-            waitingQueue.add(itemID);
+        queuePrices(Collections.singleton(itemID));
+    }
+
+    private void queuePrices(Set<Integer> itemIDs) {
+        for (int itemID : itemIDs) {
+            if (!waitingQueue.contains(itemID) && !currentlyEvaluating.contains(itemID) && checkFailureCountExceeded(itemID)) {
+                if (LOG.isTraceEnabled()) LOG.trace("queued " + itemID + " for price fetching");
+                waitingQueue.add(itemID);
+            }
         }
-        cancelAll = false;
-        synchronized(priceFetchingThread) {
-            priceFetchingThread.notify();
+        for (PriceFetchingThread priceFetchingThread : priceFetchingThreads) {
+            synchronized(priceFetchingThread) {
+                priceFetchingThread.notify();
+            }
         }
     }
 
@@ -435,109 +437,101 @@ public abstract class AbstractPricing implements Pricing {
      * and fetches the price using the specific implementation
      */
     private class PriceFetchingThread extends Thread {
-        boolean started = false;
         Set<Integer> evaluate = new HashSet<Integer>();
 
-        public PriceFetchingThread() {
-            super("Price Fetching");
+        public PriceFetchingThread(int id) {
+            super("Price Fetching " + id);
         }
 
         @Override
         public void run() {
-            started = true;
-            while (!shuttingDown) {
-                if (waitingQueue.isEmpty() || cancelAll) {
-                    if (cancelAll) {
-                        waitingQueue.clear();
-                        cancelAll = false;
-                    }
-                    try {
+            while (true) {
+                try {
+                    if (waitingQueue.isEmpty()) {
                         synchronized(this) {
                             if (LOG.isDebugEnabled()) LOG.debug("Pricing fetch thread is waiting.");
                             this.wait();
                         }
-                    } catch (InterruptedException ie) {
-                        LOG.warn("Pricing fetch thread interrupted.");
-                        // just continue.
                     }
-                }
-                notifyPricingFetchListeners(true);
+                    notifyPricingFetchListeners(true);
 
-                //Do a binary search for the failed IDs
-                if (failed != null) {
-                    List<Integer> nextList = failed.getNextList();
-                    if (nextList != null) { //Next list
-                        evaluate.addAll(nextList);
-                    } else { //List is empty - do we need to do it again?
-                        failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
-                    }
-                }
-                // fill the queue that is waiting, up to the size of the batch size.
-                // A = queueSize > 0
-                // B = batchSize > 0
-                // C = curSize < batchSize
-                // I need the truth table:
-                // A B C ==> R
-                // 0 0 0     0
-                // 0 0 1     0
-                // 0 1 0     0
-                // 0 1 1     0
-                // 1 0 0     1
-                // 1 0 1     1
-                // 1 1 0     0
-                // 1 1 1     1
-                // ==> A & ((B & C) | C)
-                // ==> A & (B | C)
-                if (LOG.isDebugEnabled()) LOG.debug("There are " + waitingQueue.size() + " items in the queue.");
-                while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
-                    Integer num = waitingQueue.remove();
-                    if (checkFailureCountExceeded(num)) {
-                        evaluate.add(num);
-                        currentlyEvaluating.add(num);
-                    }
-                }
-                if (LOG.isDebugEnabled()) LOG.debug("Starting price fetch for " + evaluate.size() + " items.");
-                // handle the list.
-                Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
-                // for each of the prices, cache, and notify listeners
-                boolean doBinarySearch = false;
-                for (Integer itemId : evaluate) {
-                    if (prices.containsKey(itemId)) { //OK
-                        PriceContainer priceContainer = prices.get(itemId);
-                        cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
-                        notifyPricingListeners(itemId);
-                    } else { //Fail
-                        if (options.getUseBinaryErrorSearch()) {
-                            if (evaluate.size() == 1) {
-                                notifyFailedFetch(itemId);
-                            } else {
-                                //New Search
-                                doBinarySearch = true;
-                            }
-                        } else {
-                            addFailureCount(itemId);
-                            waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
+                    //Do a binary search for the failed IDs
+                    if (failed != null) {
+                        List<Integer> nextList = failed.getNextList();
+                        if (nextList != null) { //Next list
+                            evaluate.addAll(nextList);
+                        } else { //List is empty - do we need to do it again?
+                            failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
                         }
                     }
+                    // fill the queue that is waiting, up to the size of the batch size.
+                    // A = queueSize > 0
+                    // B = batchSize > 0
+                    // C = curSize < batchSize
+                    // I need the truth table:
+                    // A B C ==> R
+                    // 0 0 0     0
+                    // 0 0 1     0
+                    // 0 1 0     0
+                    // 0 1 1     0
+                    // 1 0 0     1
+                    // 1 0 1     1
+                    // 1 1 0     0
+                    // 1 1 1     1
+                    // ==> A & ((B & C) | C)
+                    // ==> A & (B | C)
+                    if (LOG.isDebugEnabled()) LOG.debug("There are " + waitingQueue.size() + " items in the queue.");
+                    while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
+                        try {
+                            Integer num = waitingQueue.remove();
+                            if (checkFailureCountExceeded(num)) {
+                                evaluate.add(num);
+                                currentlyEvaluating.add(num);
+                            }
+                        } catch (NoSuchElementException ex) {
+                            //This is not a problem
+                        }
+                    }
+                    if (LOG.isDebugEnabled()) LOG.debug("Starting price fetch for " + evaluate.size() + " items.");
+                    // handle the list.
+                    Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
+                    // for each of the prices, cache, and notify listeners
+                    boolean doBinarySearch = false;
+                    for (Integer itemId : evaluate) {
+                        if (prices.containsKey(itemId)) { //OK
+                            PriceContainer priceContainer = prices.get(itemId);
+                            createCache().put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
+                            notifyPricingListeners(itemId);
+                        } else { //Fail
+                            if (options.getUseBinaryErrorSearch()) {
+                                if (evaluate.size() == 1) {
+                                    notifyFailedFetch(itemId);
+                                } else {
+                                    //New Search
+                                    doBinarySearch = true;
+                                }
+                            } else {
+                                addFailureCount(itemId);
+                                waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
+                            }
+                        }
+                    }
+                    if (doBinarySearch && failed == null) { //Start new search for the error
+                        failed = new SplitList(evaluate);
+                    }
+                    if (!doBinarySearch && failed != null) { //OK
+                        failed.removeLast();
+                    }
+                    evaluate.clear();
+                    currentlyEvaluating.clear();
+                    if (LOG.isDebugEnabled()) LOG.debug("finished fetch");
+                    notifyPricingFetchListeners(false);
+                } catch (InterruptedException ie) {
+                    LOG.warn("Pricing fetch thread interrupted.");
+                    evaluate.clear();
+                    // just continue.
                 }
-                if (doBinarySearch && failed == null) { //Start new search for the error
-                    failed = new SplitList(evaluate);
-                }
-                if (!doBinarySearch && failed != null) { //OK
-                    failed.removeLast();
-                }
-                evaluate.clear();
-                currentlyEvaluating.clear();
-                if (LOG.isDebugEnabled()) LOG.debug("finished fetch");
-                notifyPricingFetchListeners(false);
             }
-
-            LOG.debug("Price Fetching Thread ending.");
-            priceFetchingThread = null;
-        }
-
-        public boolean isStarted() {
-            return started;
         }
     }
 
@@ -573,24 +567,21 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void cancelAll() {
-        if (priceFetchingThread != null) {
-            cancelAll = true;
-        }
-    }
-
-    @Override
-    public void shutdown() {
-        shuttingDown = true;
-        waitingQueue.clear();
-        if (priceFetchingThread != null) {
+        Set<Integer> ids = new HashSet<Integer>(waitingQueue); //Save queue items for later
+        waitingQueue.clear(); //Clear queue
+        for (PriceFetchingThread priceFetchingThread : priceFetchingThreads) { //Stop what the threads are doing
             priceFetchingThread.interrupt();
-            priceFetchingThread = null;
+        }
+        currentlyEvaluating.clear(); //clear currentlyEvaluating
+        for (Integer itemID : ids) {
+            notifyFailedFetch(itemID); //Notify of failed price updates
         }
     }
 
     @Override
     public void cancelSingle(int itemID) {
         waitingQueue.remove(itemID);
+        notifyFailedFetch(itemID);
     }
 
     @Override

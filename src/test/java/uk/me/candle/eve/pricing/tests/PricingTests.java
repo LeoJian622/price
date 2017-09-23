@@ -20,8 +20,6 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
-import static org.junit.Assert.*;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,6 +27,7 @@ import java.util.Set;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingListener;
@@ -44,68 +43,70 @@ import uk.me.candle.eve.pricing.tests.reader.ItemsReader;
  */
 public class PricingTests {
 
-	@BeforeClass
-	public static void setUpClass() {
-		System.setProperty("http.agent", "Price");
-		Logger.getRootLogger().setLevel(Level.OFF);
-		//Logger.getRootLogger().setLevel(Level.INFO);
-		//Logger.getRootLogger().setLevel(Level.DEBUG);
-	}
-	
-	@AfterClass
-	public static void tearDownClass() {
-		Logger.getRootLogger().setLevel(Level.INFO);
-	}
+    @BeforeClass
+    public static void setUpClass() {
+        System.setProperty("http.agent", "Price");
+        Logger.getRootLogger().setLevel(Level.ERROR);
+        //Logger.getRootLogger().setLevel(Level.INFO);
+        //Logger.getRootLogger().setLevel(Level.DEBUG);
+    }
 
-	private static final boolean ALL = false;
+    @AfterClass
+    public static void tearDownClass() {
+        Logger.getRootLogger().setLevel(Level.INFO);
+    }
 
-	private Set<Integer> typeAll = null;
-	private Set<Integer> typeFew = null;
-	
-	public Set<Integer> synchronousPriceFetch(Pricing pricing, int typeID) {
-		 return synchronousPriceFetch(pricing, Collections.singleton(typeID));
-	}
+    private static final boolean ALL = true;
+
+    private Set<Integer> typeAll = null;
+    private Set<Integer> typeFew = null;
+
+    public Set<Integer> synchronousPriceFetch(Pricing pricing, int typeID) {
+         return synchronousPriceFetch(pricing, Collections.singleton(typeID));
+    }
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, Set<Integer> typeIDs) {
         SynchronousPriceListener listener = new SynchronousPriceListener(pricing, typeIDs);
-		listener.doStuff();
-		return listener.getFailed();
+        listener.doStuff();
+        return listener.getFailed();
     }
 
     protected class SynchronousPriceListener extends Thread implements PricingListener {
         private final Set<Integer> queue;
         private final Set<Integer> typeIDs;
-		private final Set<Integer> ok;
+        private final Set<Integer> ok;
         private final Set<Integer> failed;
-		private final Pricing pricing;
+        private final Pricing pricing;
 
-		public SynchronousPriceListener(Pricing pricing, Set<Integer> typeIDs) {
-			this.pricing = pricing;
-			this.typeIDs = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
-			this.queue = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
-			this.ok = Collections.synchronizedSet(new HashSet<Integer>());
-			this.failed = Collections.synchronizedSet(new HashSet<Integer>());
-		}
-
-		public Set<Integer> getFailed() {
-			return failed;
-		}
-
-		@Override
-        public void run() {
-			doStuff();
+        public SynchronousPriceListener(Pricing pricing, Set<Integer> typeIDs) {
+            this.pricing = pricing;
+            this.typeIDs = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
+            this.queue = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
+            this.ok = Collections.synchronizedSet(new HashSet<Integer>());
+            this.failed = Collections.synchronizedSet(new HashSet<Integer>());
         }
 
-		public void doStuff() {
-			//clear prices
-            for (int typeID : typeIDs) {
-                pricing.setPrice(typeID, -1d);
-            }
-			pricing.addPricingListener(this);
+        public Set<Integer> getFailed() {
+            return failed;
+        }
+
+        public Set<Integer> getOK() {
+            return ok;
+        }
+
+        public Set<Integer> getTypeIDs() {
+            return typeIDs;
+        }
+
+        @Override
+        public void run() {
+            doStuff();
+        }
+
+        public void doStuff() {
+            pricing.addPricingListener(this);
             //update prices
-            for (int typeID : typeIDs) {
-                getPrice(pricing, typeID);
-            }
+            pricing.updatePrices(typeIDs);
             while (!queue.isEmpty()) {
                 try {
                     synchronized(this) {
@@ -142,7 +143,7 @@ public class PricingTests {
         @Override
         public void priceUpdated(int typeID, Pricing pricing) {
             getPrice(pricing, typeID);
-			queue.remove(typeID);
+            queue.remove(typeID);
             synchronized(this) {
                 notifyAll();
             }
@@ -151,7 +152,7 @@ public class PricingTests {
         @Override
         public void priceUpdateFailed(int typeID, Pricing pricing) {
             failed.add(typeID);
-			queue.remove(typeID);
+            queue.remove(typeID);
             synchronized(this) {
                 notifyAll();
             }
@@ -168,90 +169,86 @@ public class PricingTests {
                 + ")"
                 );
 
-        
         //will be zero:
         long time = System.currentTimeMillis();
-		Set<Integer> typeIDs = getTypeIDs();
+        Set<Integer> typeIDs = getTypeIDs();
         Set<Integer> failed = synchronousPriceFetch(pricing, typeIDs);
         System.out.println("    " + (typeIDs.size() - failed.size()) + " of " + typeIDs.size() + " done - " + failed.size() + " failed - completed in " + formatTime(System.currentTimeMillis() - time));
         assertTrue(failed.isEmpty());
     }
 
-	protected Set<Integer> getTypeIDs() {
-		if (ALL) {
-			if (typeAll == null) {
-				typeAll = new HashSet<Integer>();
-				Map<Integer, Item> items = null;
-				items = ItemsReader.load();
-				if (items == null) {
-					
-				} else {
-					for (Item item : items.values()) {
-						if (item.isMarketGroup()) {
-							typeAll.add(item.getTypeID());
-						}
-					}
-				}
-			}
-			return typeAll;
-		} else {
-			if (typeFew == null) {
-				typeFew = new HashSet<Integer>();
-				for (int i = 178; i <= 267; i++) {
-					if (i == 214) {
-						continue;
-					}
-					typeFew.add(i);
-				}
-				typeFew.add(34);
-				typeFew.add(627);
-				typeFew.add(17865);
-				typeFew.add(17347);
-				typeFew.add(20183);
-				typeFew.add(20183);
-				typeFew.add(455);
-				typeFew.add(33578);
-				typeFew.add(33579);
-			}
-			return typeFew;
-		}
-	}
+    protected Set<Integer> getTypeIDs() {
+        if (ALL) {
+            if (typeAll == null) {
+                typeAll = new HashSet<Integer>();
+                Map<Integer, Item> items = ItemsReader.load();
+                if (items != null) {
+                    for (Item item : items.values()) {
+                        if (item.isMarketGroup()) {
+                            typeAll.add(item.getTypeID());
+                        }
+                    }
+                }
+            }
+            return typeAll;
+        } else {
+            if (typeFew == null) {
+                typeFew = new HashSet<Integer>();
+                for (int i = 178; i <= 267; i++) {
+                    if (i == 214) {
+                        continue;
+                    }
+                    typeFew.add(i);
+                }
+                typeFew.add(34);
+                typeFew.add(627);
+                typeFew.add(17865);
+                typeFew.add(17347);
+                typeFew.add(20183);
+                typeFew.add(20183);
+                typeFew.add(455);
+                typeFew.add(33578);
+                typeFew.add(33579);
+            }
+            return typeFew;
+        }
+    }
 
     private String formatTime(long time) {
-		final StringBuilder timeString = new StringBuilder();
-		long days = time / (24 * 60 * 60 * 1000);
-		if (days > 0) {
-			timeString.append(days);
-			timeString.append("d");
-		}
-		long hours = time / (60 * 60 * 1000) % 24;
-		if (hours > 0) {
-			if (days > 0) {
-				timeString.append(" ");
-			}
-			timeString.append(hours);
-			timeString.append("h");
-		}
-		long minutes = time / (60 * 1000) % 60;
-		if (minutes > 0) {
-			if (hours > 0) {
-				timeString.append(" ");
-			}
-			timeString.append(minutes);
-			timeString.append("m");
-		}
-		long seconds = time / (1000) % 60;
-		if (seconds > 0) {
-			if (minutes > 0) {
-				timeString.append(" ");
-			}
-			timeString.append(seconds);
-			timeString.append("s");
-		}
-		if (days == 0 && hours == 0 && minutes == 0 && seconds == 0) {
-			timeString.append(time);
-			timeString.append("ms");
-		}
-		return timeString.toString();
-	}
+        final StringBuilder timeString = new StringBuilder();
+        long days = time / (24 * 60 * 60 * 1000);
+        if (days > 0) {
+            timeString.append(days);
+            timeString.append("d");
+        }
+        long hours = time / (60 * 60 * 1000) % 24;
+        if (hours > 0) {
+            if (days > 0) {
+                timeString.append(" ");
+            }
+            timeString.append(hours);
+            timeString.append("h");
+        }
+        long minutes = time / (60 * 1000) % 60;
+        if (minutes > 0) {
+            if (hours > 0) {
+                timeString.append(" ");
+            }
+            timeString.append(minutes);
+            timeString.append("m");
+        }
+        long seconds = time / (1000) % 60;
+        if (seconds > 0) {
+            if (minutes > 0) {
+                timeString.append(" ");
+            }
+            timeString.append(seconds);
+            timeString.append("s");
+        }
+        if (days == 0 && hours == 0 && minutes == 0 && seconds == 0) {
+            timeString.append(time);
+            timeString.append("ms");
+        }
+        return timeString.toString();
+    }
 }

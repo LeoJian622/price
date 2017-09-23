@@ -22,6 +22,7 @@ package uk.me.candle.eve.pricing;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingOptions;
 import uk.me.candle.eve.pricing.options.PricingType;
@@ -31,6 +32,12 @@ import uk.me.candle.eve.pricing.options.PricingType;
  * @author Candle
  */
 public interface Pricing {
+
+    /**
+     * Update all prices in the Set
+     * @param itemIDs
+     */
+    public void updatePrices(Set<Integer> itemIDs);
 
     /**
      *
@@ -61,12 +68,6 @@ public interface Pricing {
     public boolean addPricingListener(PricingListener pl);
     public boolean removePricingFetchListener(PricingFetchListener o);
     public boolean addPricingFetchListener(PricingFetchListener pfl);
-
-	/**
-	 * Reset the cache time on item
-	 * @param itemID 
-	 */
-	public void resetCache(int itemID);
 
     /**
      * to unset a price, and queue it for fetching again, set the price to negative.
@@ -135,9 +136,4 @@ public interface Pricing {
      * @return a list of error messages or an empty list if there were no errors.
      */
     public List<String> getFetchErrors(int typeID);
-    
-    /**
-     * empties the queue and ends any threads.
-     */
-    public void shutdown();
 }

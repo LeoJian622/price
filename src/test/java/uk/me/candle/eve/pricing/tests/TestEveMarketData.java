@@ -20,17 +20,20 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import javax.xml.parsers.ParserConfigurationException;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import org.dom4j.dom.DOMElement;
+import static org.junit.Assert.*;
 import org.junit.Test;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveMarketData;
@@ -63,7 +66,7 @@ public class TestEveMarketData extends PricingTests {
         testAll(pricing);
     }
 
-	@Test
+    @Test
     public void testGetPriceOnlineSystem() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
@@ -101,9 +104,9 @@ public class TestEveMarketData extends PricingTests {
         testAll(pricing);
     }
 
-	@Test
+    @Test
     public void testGetPriceFail() {
-		System.out.println("Testing EVE_MARKETDATA errors");
+        System.out.println("Testing EVE_MARKETDATA errors");
         final EveMarketData pricing = new EveMarketDataEmptyDummy();
         pricing.setOptions(new DefaultPricingOptions() {
             @Override
@@ -114,20 +117,26 @@ public class TestEveMarketData extends PricingTests {
             public LocationType getLocationType() {
                 return LocationType.REGION;
             }
-			@Override
+            @Override
             public PricingFetch getPricingFetchImplementation() {
                 return PricingFetch.EVE_MARKETDATA;
             }
         });
         pricing.setPrice(34, -1d);
         Set<Integer> failed = synchronousPriceFetch(pricing, 34);
-		assertEquals(failed.size(), 1);
+        assertEquals(failed.size(), 1);
     }
 
     class EveMarketDataEmptyDummy extends EveMarketData {
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-			throw  new DocumentException("Test");
+            throw  new DocumentException("Test");
         }
+
+        @Override
+        protected Element getElement(URL url) throws SocketTimeoutException, DocumentException, IOException, ParserConfigurationException, SAXException {
+            return new DOMElement("Hmm");
+        }
+
     }
 }
