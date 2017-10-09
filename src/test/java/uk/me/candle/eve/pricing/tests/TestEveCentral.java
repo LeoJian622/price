@@ -20,8 +20,6 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
@@ -31,6 +29,8 @@ import java.util.List;
 import java.util.Set;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import static org.junit.Assert.*;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
@@ -45,7 +45,7 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
  */
 public class TestEveCentral extends PricingTests {
 
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineRegions() {
         //Empire
         final List<Long> locations = new ArrayList<Long>();
@@ -94,7 +94,7 @@ public class TestEveCentral extends PricingTests {
         testAll(pricing);
     }
 
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineRegion() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override public List<Long> getLocations() {
@@ -112,7 +112,7 @@ public class TestEveCentral extends PricingTests {
         testAll(pricing);
     }
     
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineSystem() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
@@ -133,31 +133,36 @@ public class TestEveCentral extends PricingTests {
 
     @Test
     public void testGetPriceFail() {
-		System.out.println("Testing EVE_CENTRAL errors");
+        System.out.println("Testing EVE_CENTRAL errors");
         final EveCentral pricing = new EveCentralEmptyDummy();
         pricing.setOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);
             }
-			@Override
+            @Override
             public LocationType getLocationType() {
                 return LocationType.REGION;
             }
-			@Override
+            @Override
             public PricingFetch getPricingFetchImplementation() {
                 return PricingFetch.EVE_CENTRAL;
             }
         });
         pricing.setPrice(34, -1d);
-		Set<Integer> failed = synchronousPriceFetch(pricing, 34);
-		assertEquals(failed.size(), 1);
+        Set<Integer> failed = synchronousPriceFetch(pricing, 34);
+        assertEquals(failed.size(), 1);
     }
 
-	class EveCentralEmptyDummy extends EveCentral {
+    class EveCentralEmptyDummy extends EveCentral {
+
+        public EveCentralEmptyDummy() {
+            super(1);
+        }
+
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-			throw  new DocumentException("Test");
+            throw  new DocumentException("Test");
         }
     }
 }

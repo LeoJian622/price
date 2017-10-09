@@ -119,8 +119,8 @@ public abstract class AbstractPricing implements Pricing {
     PricingOptions options;
     // </editor-fold>
 
-    public AbstractPricing() {
-        for (int i = 1; i <= 1; i++) {
+    public AbstractPricing(int threads) {
+        for (int i = 1; i <= threads; i++) {
             PriceFetchingThread priceFetchingThread = new PriceFetchingThread(i);
             priceFetchingThreads.add(priceFetchingThread);
             priceFetchingThread.start();
@@ -226,7 +226,7 @@ public abstract class AbstractPricing implements Pricing {
         } else {
             urlCon = url.openConnection();
         }
-        urlCon.setReadTimeout(45000); //45 seconds
+        urlCon.setReadTimeout(options.getTimeout());
         urlCon.setDoInput(true);
         urlCon.setRequestProperty("Accept-Encoding", "gzip");
 

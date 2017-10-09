@@ -110,6 +110,11 @@ public class TestEveAddicts extends PricingTests {
     }
 
     class EveAddictsEmptyDummy extends EveAddicts {
+
+        public EveAddictsEmptyDummy() {
+            super(1);
+        }
+
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
 			throw  new DocumentException("Test");

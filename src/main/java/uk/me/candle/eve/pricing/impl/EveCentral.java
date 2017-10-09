@@ -37,7 +37,11 @@ import uk.me.candle.eve.pricing.options.PricingType;
  * @author Candle
  */
 public class EveCentral extends AbstractPricingEasy {
-   
+
+    public EveCentral(int threads) {
+        super(threads);
+    }
+
     @Override
     protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {
         StringBuilder xPath = new StringBuilder("/evec_api/marketstat/type[@id=\"");

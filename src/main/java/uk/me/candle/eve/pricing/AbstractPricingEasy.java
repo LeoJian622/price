@@ -39,7 +39,9 @@ import uk.me.candle.eve.pricing.options.PricingType;
 public abstract class AbstractPricingEasy extends AbstractPricing {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractPricingEasy.class);
 
-    private URL url;
+    public AbstractPricingEasy(int threads) {
+        super(threads);
+    }
 
     protected abstract URL getURL(Collection<Integer> itemIDs) throws 
             SocketTimeoutException, DocumentException, IOException;
@@ -84,7 +86,7 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
         LOG.info("getting " + itemIDs.size() + " prices");
         Map<Integer, PriceContainer> returnMap = new HashMap<Integer, PriceContainer>();
         //System.out.println("failed: " + failed.size());
-        url = null;
+        URL url = null;
         try {
             url = getURL(itemIDs);
             Document d = getDocument(url);

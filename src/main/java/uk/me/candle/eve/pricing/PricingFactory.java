@@ -45,7 +45,7 @@ public class PricingFactory {
 
     private static Pricing getEveMarketData(PricingOptions options) {
         if (eveMarketData == null) {
-            eveMarketData = new EveMarketData();
+            eveMarketData = new EveMarketData(2);
         } else {
             eveMarketData.resetAllAttemptCounters();
         }
@@ -56,7 +56,7 @@ public class PricingFactory {
     }
     private static Pricing getEveMarketeer(PricingOptions options) {
         if (eveMarketeer == null) {
-            eveMarketeer = new EveMarketeer();
+            eveMarketeer = new EveMarketeer(1);
         } else {
             eveMarketeer.resetAllAttemptCounters();
         }
@@ -67,7 +67,7 @@ public class PricingFactory {
     }
     private static Pricing getEveCentral(PricingOptions options) {
         if (eveCentral == null) {
-            eveCentral = new EveCentral();
+            eveCentral = new EveCentral(1);
         } else {
             eveCentral.resetAllAttemptCounters();
         }
@@ -78,7 +78,7 @@ public class PricingFactory {
     }
     private static Pricing getEveAddicts(PricingOptions options) {
         if (eveAddicts == null) {
-            eveAddicts = new EveAddicts();
+            eveAddicts = new EveAddicts(1);
         } else {
             eveAddicts.resetAllAttemptCounters();
         }

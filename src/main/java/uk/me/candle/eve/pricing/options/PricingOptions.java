@@ -73,4 +73,10 @@ public interface PricingOptions {
      * @return the number of attempts that should be made to fetch a price for a particular item.
      */
     public int getAttemptCount();
+
+    /**
+     * Connection timeout in milliseconds
+     * @return 
+     */
+    public int getTimeout();
 }

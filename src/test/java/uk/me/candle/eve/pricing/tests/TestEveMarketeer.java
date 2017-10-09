@@ -123,6 +123,11 @@ public class TestEveMarketeer extends PricingTests {
     }
 
 	class EveMarketeerEmptyDummy extends EveMarketeer {
+
+        public EveMarketeerEmptyDummy() {
+            super(1);
+        }
+
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
 			throw  new DocumentException("Test");

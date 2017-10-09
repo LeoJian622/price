@@ -35,6 +35,10 @@ import uk.me.candle.eve.pricing.options.PricingType;
 
 public class EveAddicts extends AbstractPricingEasy {
 
+    public EveAddicts(int threads) {
+        super(threads);
+    }
+
     @Override
     protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {
         StringBuilder xPath = new StringBuilder("/prices/typeID[@id='");

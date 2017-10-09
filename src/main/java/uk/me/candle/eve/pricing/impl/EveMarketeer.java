@@ -38,6 +38,10 @@ import uk.me.candle.eve.pricing.options.PricingType;
  */
 public class EveMarketeer extends AbstractPricingEasy {
 
+    public EveMarketeer(int threads) {
+        super(threads);
+    }
+
     @Override
     protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {
         StringBuilder xPath = new StringBuilder("/result/row[type_id=");

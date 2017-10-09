@@ -42,6 +42,10 @@ import uk.me.candle.eve.pricing.options.PricingType;
  */
 public class EveMarketData extends AbstractPricingFast {
 
+    public EveMarketData(int threads) {
+        super(threads);
+    }
+
     @Override
     protected Map<Integer, PriceContainer> extractPrices(Element element) {
         Map<Integer, PriceContainer.PriceContainerBuilder> builders = new HashMap<Integer, PriceContainer.PriceContainerBuilder>();
@@ -95,7 +99,7 @@ public class EveMarketData extends AbstractPricingFast {
 
     @Override
     protected int getBatchSize() {
-        return 1000;
+        return 750;
     }
 
     @Override

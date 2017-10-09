@@ -98,4 +98,10 @@ public class DefaultPricingOptions implements PricingOptions {
 	public boolean getUseBinaryErrorSearch() {
 		return false;
 	}
+
+    @Override
+    public int getTimeout() {
+        return 20000;
+    }
+
 }

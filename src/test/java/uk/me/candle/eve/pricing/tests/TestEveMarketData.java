@@ -128,6 +128,11 @@ public class TestEveMarketData extends PricingTests {
     }
 
     class EveMarketDataEmptyDummy extends EveMarketData {
+
+        public EveMarketDataEmptyDummy() {
+            super(1);
+        }
+
         @Override
         protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
             throw  new DocumentException("Test");
