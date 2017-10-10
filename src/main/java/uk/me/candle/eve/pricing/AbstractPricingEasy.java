@@ -85,10 +85,11 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
     protected final Map<Integer, PriceContainer> fetchPrices(Collection<Integer> itemIDs) {
         LOG.info("getting " + itemIDs.size() + " prices");
         Map<Integer, PriceContainer> returnMap = new HashMap<Integer, PriceContainer>();
-        //System.out.println("failed: " + failed.size());
-        URL url = null;
+        if (itemIDs.isEmpty()) {
+            return returnMap;
+        }
         try {
-            url = getURL(itemIDs);
+            URL url = getURL(itemIDs);
             Document d = getDocument(url);
             for (Integer i : itemIDs) {
                 PriceContainer price = extractPrice(d, i);
@@ -96,19 +97,14 @@ public abstract class AbstractPricingEasy extends AbstractPricing {
 					returnMap.put(i, price);
 				}
             }
-        } catch (SocketTimeoutException ste) {
-            //Minor failure
-            LOG.error("Timeout while fetching URL:" + url, ste);
-            LOG.debug("Reducing the batch size by -1 from " + getBatchSize());
-            addFailureReasons(itemIDs, ste.getMessage());
-        } catch (DocumentException de) {
+        } catch (DocumentException ex) {
             //Critical failure
-            LOG.error("Error fetching price", de);
-            addFailureReasons(itemIDs, de.getMessage());
-        } catch (IOException ioe) {
+            LOG.error("Error fetching price", ex);
+            addFailureReasons(itemIDs, ex.getMessage());
+        } catch (IOException ex) {
             //Critical failure
-            LOG.error("Error fetching price", ioe);
-            addFailureReasons(itemIDs, ioe.getMessage());
+            LOG.error("Error fetching price", ex);
+            addFailureReasons(itemIDs, ex.getMessage());
         }
         return returnMap;
     }

@@ -36,7 +36,7 @@ import org.xml.sax.SAXException;
 
 
 public abstract class AbstractPricingFast extends AbstractPricing {
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractPricingEasy.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractPricingFast.class);
 
     public AbstractPricingFast(int threads) {
         super(threads);
@@ -56,10 +56,11 @@ public abstract class AbstractPricingFast extends AbstractPricing {
     protected final Map<Integer, PriceContainer> fetchPrices(Collection<Integer> itemIDs) {
         LOG.info("getting " + itemIDs.size() + " prices");
         Map<Integer, PriceContainer> returnMap = new HashMap<Integer, PriceContainer>();
-        //System.out.println("failed: " + failed.size());
-        URL url = null;
+        if (itemIDs.isEmpty()) {
+            return returnMap;
+        }
         try {
-            url = getURL(itemIDs);
+            URL url = getURL(itemIDs);
             Element element = getElement(url);
             returnMap.putAll(extractPrices(element));
         } catch (SocketTimeoutException ex) {
