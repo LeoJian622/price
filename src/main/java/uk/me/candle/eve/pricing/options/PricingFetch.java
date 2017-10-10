@@ -32,6 +32,16 @@ public enum PricingFetch {
             return PricingType.values();
         }
     },
+    EVEMARKETER {
+        @Override
+        public PricingNumber[] getSupportedPricingNumbers() {
+            return PricingNumber.values();
+        }
+        @Override
+        public PricingType[] getSupportedPricingTypes() {
+            return PricingType.values();
+        }
+    },
     EVE_MARKETDATA {
         @Override
         public PricingNumber[] getSupportedPricingNumbers() {

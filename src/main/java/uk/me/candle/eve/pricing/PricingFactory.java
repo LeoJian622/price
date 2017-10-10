@@ -31,6 +31,7 @@ public class PricingFactory {
     static EveCentral eveCentral;
     static EveMarketData eveMarketData;
     static EveMarketeer eveMarketeer;
+    static EveMarketer eveMarketer;
     static EveAddicts eveAddicts;
 
     public static Pricing getPricing(PricingOptions options) {
@@ -39,6 +40,7 @@ public class PricingFactory {
             case EVE_ADDICTS: return getEveAddicts(options);
             case EVE_CENTRAL: return getEveCentral(options);
             case EVE_MARKETDATA: return getEveMarketData(options);
+            case EVEMARKETER: return getEveMarketer(options);
             default: return getEveCentral(options);
         }
     }
@@ -64,6 +66,17 @@ public class PricingFactory {
             eveMarketeer.setOptions(options);
         }
         return eveMarketeer;
+    }
+    private static Pricing getEveMarketer(PricingOptions options) {
+        if (eveMarketer == null) {
+            eveMarketer = new EveMarketer(2);
+        } else {
+            eveMarketer.resetAllAttemptCounters();
+        }
+        if (options != null) {
+            eveMarketer.setOptions(options);
+        }
+        return eveMarketer;
     }
     private static Pricing getEveCentral(PricingOptions options) {
         if (eveCentral == null) {
