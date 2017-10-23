@@ -43,7 +43,7 @@ public class ReadWriteTest extends PricingTests {
     private static final String FILENAME = "pricing.serial";
     private static final int PRICES = 400;
     private static final int THREADS = 10;
-    private static final int ITERATIONS = 10;
+    private static final int ITERATIONS = 1;
 
     private final ReadWriteOptions readWriteOptions = new ReadWriteOptions();
     private final File file = new File(FILENAME);

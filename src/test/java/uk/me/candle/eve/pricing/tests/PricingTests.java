@@ -56,6 +56,8 @@ public class PricingTests {
         Logger.getRootLogger().setLevel(Level.INFO);
     }
 
+    private static final int PRICES = -1; //-1 for all
+    
     private Map<Integer, Item> items;
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, int typeID) {
@@ -181,7 +183,7 @@ public class PricingTests {
     }
 
     protected Set<Integer> getTypeIDs() {
-        return getTypeIDs(-1);
+        return getTypeIDs(PRICES);
     }
 
     protected Set<Integer> getTypeIDs(int count) {
