@@ -52,7 +52,7 @@ public class PricingFactory {
             eveMarketData.resetAllAttemptCounters();
         }
         if (options != null) {
-            eveMarketData.setOptions(options);
+            eveMarketData.setPricingOptions(options);
         }
         return eveMarketData;
     }
@@ -63,7 +63,7 @@ public class PricingFactory {
             eveMarketeer.resetAllAttemptCounters();
         }
         if (options != null) {
-            eveMarketeer.setOptions(options);
+            eveMarketeer.setPricingOptions(options);
         }
         return eveMarketeer;
     }
@@ -74,7 +74,7 @@ public class PricingFactory {
             eveMarketer.resetAllAttemptCounters();
         }
         if (options != null) {
-            eveMarketer.setOptions(options);
+            eveMarketer.setPricingOptions(options);
         }
         return eveMarketer;
     }
@@ -85,7 +85,7 @@ public class PricingFactory {
             eveCentral.resetAllAttemptCounters();
         }
         if (options != null) {
-            eveCentral.setOptions(options);
+            eveCentral.setPricingOptions(options);
         }
         return eveCentral;
     }
@@ -96,7 +96,7 @@ public class PricingFactory {
             eveAddicts.resetAllAttemptCounters();
         }
         if (options != null) {
-            eveAddicts.setOptions(options);
+            eveAddicts.setPricingOptions(options);
         }
         return eveAddicts;
     }

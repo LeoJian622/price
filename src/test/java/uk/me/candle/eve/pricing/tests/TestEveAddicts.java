@@ -90,7 +90,7 @@ public class TestEveAddicts extends PricingTests {
     public void testGetPriceFail() {
 		System.out.println("Testing EVE_ADDICTS errors");
         final EveAddicts pricing = new EveAddictsEmptyDummy();
-        pricing.setOptions(new DefaultPricingOptions() {
+        pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);

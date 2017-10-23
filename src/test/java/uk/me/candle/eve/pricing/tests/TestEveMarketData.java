@@ -108,7 +108,7 @@ public class TestEveMarketData extends PricingTests {
     public void testGetPriceFail() {
         System.out.println("Testing EVE_MARKETDATA errors");
         final EveMarketData pricing = new EveMarketDataEmptyDummy();
-        pricing.setOptions(new DefaultPricingOptions() {
+        pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);

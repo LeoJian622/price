@@ -85,7 +85,7 @@ public class EveMarketerTest extends PricingTests {
     public void testGetPriceFail() {
         System.out.println("Testing EveMarketer errors");
         final EveMarketer pricing = new EveMarketerEmptyDummy();
-        pricing.setOptions(new DefaultPricingOptions() {
+        pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);

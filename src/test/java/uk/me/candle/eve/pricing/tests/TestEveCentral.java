@@ -135,7 +135,7 @@ public class TestEveCentral extends PricingTests {
     public void testGetPriceFail() {
         System.out.println("Testing EVE_CENTRAL errors");
         final EveCentral pricing = new EveCentralEmptyDummy();
-        pricing.setOptions(new DefaultPricingOptions() {
+        pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override
             public List<Long> getLocations() {
                 return Collections.singletonList(10000002L);

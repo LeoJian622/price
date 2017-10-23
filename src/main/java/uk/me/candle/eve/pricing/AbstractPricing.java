@@ -59,6 +59,7 @@ import org.xml.sax.SAXException;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingOptions;
 import uk.me.candle.eve.pricing.options.PricingType;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 import uk.me.candle.eve.pricing.util.SplitList;
 
 /**
@@ -71,7 +72,7 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * internal mem-cache of prices.
      */
-    private Map<Integer, CachedPrice> cache;
+    private final Map<Integer, CachedPrice> cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());;
     /**
      * list of listeners to notify when a price has been fetched.
      */
@@ -87,7 +88,6 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * queue of itemIDs that failed on last fetched
      */
-    private SplitList failed;
     /**
      * list of item IDs that are being fetched - this is here so that we don't queue an ID that is in the process of
      * being fetched.
@@ -116,7 +116,7 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * defines some options.
      */
-    PricingOptions options;
+    PricingOptions options = new DefaultPricingOptions();
     // </editor-fold>
 
     public AbstractPricing(int threads) {
@@ -126,30 +126,10 @@ public abstract class AbstractPricing implements Pricing {
             priceFetchingThread.start();
         }
     }
-    
-    //@NotNull
-    private Map<Integer, CachedPrice> createCache() {
-        if (cache == null) {
-            if (options != null) {
-                try {
-                    read(options.getCacheInputStream());
-                } catch (IOException ioe) {
-                    LOG.error("Error reading the cache file (Other IO error)", ioe);
-                    cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
-                } catch (ClassNotFoundException cnfe) {
-                    LOG.error("Error reading the cache file (incompatible classes)", cnfe);
-                    cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
-                }
-            } else {
-                cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
-            }
-        }
-        return cache;
-    }
 
     @Override
     public Double getPriceCache(int itemID, PricingType type, PricingNumber number) {
-        CachedPrice cp = createCache().get(itemID);
+        CachedPrice cp = cache.get(itemID);
         if (cp != null) {
             return cp.getContainer().getPrice(type, number);
         } else {
@@ -159,7 +139,7 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public Double getPrice(int itemID, PricingType type, PricingNumber number) {
-        CachedPrice cp = createCache().get(itemID);
+        CachedPrice cp = cache.get(itemID);
         // Queue the price for fetching, if: we do not have a cached price
         // If we have a cached price, then queue the fetch only if the
         // cache timers are enabled.
@@ -185,7 +165,7 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public long getNextUpdateTime(int itemID) {
-        CachedPrice cp = createCache().get(itemID);
+        CachedPrice cp = cache.get(itemID);
         if (cp == null) return -1; // needs an update.
         return cp.getTime();
     }
@@ -239,8 +219,12 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void setPricingOptions(PricingOptions options) {
+        if (options == null) {
+            throw new IllegalArgumentException("Options can not be null");
+        }
         this.options = options;
         cacheTimer = options.getPriceCacheTimer();
+        read();
     }
 
     /**
@@ -285,7 +269,7 @@ public abstract class AbstractPricing implements Pricing {
         } else {
             cacheTime = -1;
         }
-        CachedPrice current = createCache().get(itemID);
+        CachedPrice current = cache.get(itemID);
         PriceContainer.PriceContainerBuilder builder;
         if (current != null) {
             builder = current.getContainer().createClone();
@@ -293,7 +277,7 @@ public abstract class AbstractPricing implements Pricing {
             builder = new PriceContainer.PriceContainerBuilder();
         }
         builder.putPrice(type, number, price);
-        createCache().put(itemID, new CachedPrice(cacheTime, builder.build()));
+        cache.put(itemID, new CachedPrice(cacheTime, builder.build()));
         notifyPricingListeners(itemID);
     }
 
@@ -302,15 +286,7 @@ public abstract class AbstractPricing implements Pricing {
         setPrice(itemID, options.getPricingType(), options.getPricingNumber(), price);
     }
 
-    public Map<Integer, CachedPrice> getCache() {
-        return Collections.unmodifiableMap(createCache());
-    }
-
-    public void setOptions(PricingOptions options) {
-        this.options = options;
-        this.cacheTimer = options.getPriceCacheTimer();
-    }
-
+   
     @Override
     public PricingOptions getPricingOptions() {
         return options;
@@ -426,7 +402,7 @@ public abstract class AbstractPricing implements Pricing {
         }
         for (PriceFetchingThread priceFetchingThread : priceFetchingThreads) {
             synchronized(priceFetchingThread) {
-                priceFetchingThread.notify();
+                priceFetchingThread.notifyAll();
             }
         }
     }
@@ -437,7 +413,8 @@ public abstract class AbstractPricing implements Pricing {
      * and fetches the price using the specific implementation
      */
     private class PriceFetchingThread extends Thread {
-        Set<Integer> evaluate = new HashSet<Integer>();
+        private final Set<Integer> evaluate = new HashSet<Integer>();
+        private SplitList failed;
 
         public PriceFetchingThread(int id) {
             super("Price Fetching " + id);
@@ -500,7 +477,7 @@ public abstract class AbstractPricing implements Pricing {
                     for (Integer itemId : evaluate) {
                         if (prices.containsKey(itemId)) { //OK
                             PriceContainer priceContainer = prices.get(itemId);
-                            createCache().put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
+                            cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
                             notifyPricingListeners(itemId);
                         } else { //Fail
                             if (options.getUseBinaryErrorSearch()) {
@@ -537,32 +514,53 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void writeCache() throws IOException {
-        write(options.getCacheOutputStream());
+        write();
     }
 
     @SuppressWarnings("unchecked")
-    private void read(InputStream input) throws IOException, ClassNotFoundException {
-        if (input != null) {
-            ObjectInputStream oos = new ObjectInputStream(input);
-            cache =  Collections.synchronizedMap((Map<Integer, CachedPrice>)oos.readObject());
-        }
-        if (cache == null) {
-            cache =  Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());
+    private synchronized void read() { //Only read/write one at the time
+        InputStream input = null;
+        try {
+            input = options.getCacheInputStream();
+            if (input != null) {
+                ObjectInputStream oos = new ObjectInputStream(input);
+                cache.putAll((Map<Integer, CachedPrice>)oos.readObject()); //synchronized by map
+            }
+        } catch (IOException ioe) {
+            LOG.error("Error reading the cache file (Other IO error)", ioe);
+        } catch (ClassNotFoundException cnfe) {
+            LOG.error("Error reading the cache file (incompatible classes)", cnfe);
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException ex) {
+                    
+                }
+            }
         }
     }
 
-    private void write(OutputStream output) throws IOException {
-        if (output != null) {
-            ObjectOutputStream oos = new ObjectOutputStream(output);
-            oos.writeObject(cache);
-            oos.flush();
+    private synchronized void write() throws IOException { //Only read/write one at the time
+        OutputStream output = null;
+        try {
+            output = options.getCacheOutputStream();
+            if (output != null) {
+                synchronized(cache) { //synchronize map access
+                    ObjectOutputStream oos = new ObjectOutputStream(output);
+                    oos.writeObject(cache);
+                    oos.flush();
+                }
+            }
+        } finally {
+            if (output != null) {
+                try {
+                    output.close();
+                } catch (IOException ex) {
+                    
+                }
+            }
         }
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        write(options.getCacheOutputStream());
     }
 
     @Override

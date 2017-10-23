@@ -56,10 +56,7 @@ public class PricingTests {
         Logger.getRootLogger().setLevel(Level.INFO);
     }
 
-    private static final boolean ALL = true;
-
-    private Set<Integer> typeAll = null;
-    private Set<Integer> typeFew = null;
+    private Map<Integer, Item> items;
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, int typeID) {
          return synchronousPriceFetch(pricing, Collections.singleton(typeID));
@@ -67,11 +64,16 @@ public class PricingTests {
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, Set<Integer> typeIDs) {
         SynchronousPriceListener listener = new SynchronousPriceListener(pricing, typeIDs);
-        listener.doStuff();
+        listener.start();
+        try {
+            listener.join();
+        } catch (InterruptedException ex) {
+            fail(ex.getMessage());
+        }
         return listener.getFailed();
     }
 
-    protected class SynchronousPriceListener extends Thread implements PricingListener {
+    protected static class SynchronousPriceListener extends Thread implements PricingListener {
         private final Set<Integer> queue;
         private final Set<Integer> typeIDs;
         private final Set<Integer> ok;
@@ -79,6 +81,7 @@ public class PricingTests {
         private final Pricing pricing;
 
         public SynchronousPriceListener(Pricing pricing, Set<Integer> typeIDs) {
+            super("SynchronousPriceListener");
             this.pricing = pricing;
             this.typeIDs = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
             this.queue = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
@@ -178,40 +181,42 @@ public class PricingTests {
     }
 
     protected Set<Integer> getTypeIDs() {
-        if (ALL) {
-            if (typeAll == null) {
-                typeAll = new HashSet<Integer>();
-                Map<Integer, Item> items = ItemsReader.load();
-                if (items != null) {
-                    for (Item item : items.values()) {
-                        if (item.isMarketGroup()) {
-                            typeAll.add(item.getTypeID());
-                        }
-                    }
-                }
-            }
-            return typeAll;
-        } else {
-            if (typeFew == null) {
-                typeFew = new HashSet<Integer>();
-                for (int i = 178; i <= 267; i++) {
-                    if (i == 214) {
-                        continue;
-                    }
-                    typeFew.add(i);
-                }
-                typeFew.add(34);
-                typeFew.add(627);
-                typeFew.add(17865);
-                typeFew.add(17347);
-                typeFew.add(20183);
-                typeFew.add(20183);
-                typeFew.add(455);
-                typeFew.add(33578);
-                typeFew.add(33579);
-            }
-            return typeFew;
+        return getTypeIDs(-1);
+    }
+
+    protected Set<Integer> getTypeIDs(int count) {
+        Set<Integer> typeIDs = new HashSet<Integer>();
+        if (items == null) { //Only load items once
+            items = ItemsReader.load();
         }
+        if (items != null) {
+            for (Item item : items.values()) {
+                if (item.isMarketGroup()) {
+                    typeIDs.add(item.getTypeID());
+                    if (typeIDs.size() >= count && count > 0) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            typeIDs = new HashSet<Integer>();
+            for (int i = 178; i <= 267; i++) {
+                if (i == 214) {
+                    continue;
+                }
+                typeIDs.add(i);
+            }
+            typeIDs.add(34);
+            typeIDs.add(627);
+            typeIDs.add(17865);
+            typeIDs.add(17347);
+            typeIDs.add(20183);
+            typeIDs.add(20183);
+            typeIDs.add(455);
+            typeIDs.add(33578);
+            typeIDs.add(33579);
+        }
+        return typeIDs;
     }
 
     private String formatTime(long time) {
