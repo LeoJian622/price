@@ -3,7 +3,7 @@
     <groupId>uk.me.candle</groupId>
     <artifactId>pricing</artifactId>
     <packaging>jar</packaging>
-    <version>1.7.4-SNAPSHOT</version>
+    <version>1.8.0</version>
     <name>pricing</name>
     <url>http://maven.apache.org</url>
     <distributionManagement>
