@@ -120,7 +120,7 @@ public class PricingTests {
             while (!queue.isEmpty()) {
                 try {
                     synchronized(this) {
-                        wait(); // this is notified in the SynchronousPriceListener2
+                        wait(1000); // this is notified in the SynchronousPriceListener2
                         // once it is notified, it checks the loop condition again
                         //System.out.println("Working >> " + ok.size() + " of " + typeIDs.size() + " done - " + failed.size() + " failed");
                     }
