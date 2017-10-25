@@ -35,6 +35,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
+import uk.me.candle.eve.pricing.impl.EveMarketer;
 import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
@@ -58,7 +59,7 @@ public class ReadWriteTest extends PricingTests {
         }
         //Create file data to read
         typeIDs = getTypeIDs(PRICES);
-        pricing = PricingFactory.getPricing(readWriteOptions);
+        pricing = new EveMarketer(2); //need new instant to complete faster
         Set<Integer> prices = synchronousPriceFetch(pricing, typeIDs);
         assertEquals(0, prices.size());
         try {
