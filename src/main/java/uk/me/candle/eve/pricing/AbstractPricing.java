@@ -49,9 +49,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
@@ -170,34 +167,11 @@ public abstract class AbstractPricing implements Pricing {
         return cp.getTime();
     }
 
-    /**
-     * fetches an XML document.
-     * @param url
-     * @return
-     * @throws java.net.SocketTimeoutException if the source data took too long to retrieve
-     * @throws org.dom4j.DocumentException if the source data could not be parsed into a Document
-     * @throws java.io.IOException
-     */
-    protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(getInputStream(url)));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while (null != (line = br.readLine())) {
-            sb.append(line);
-        }
-        br.close();
-
-        Document d = DocumentHelper.parseText(sb.toString());
-
-        if (LOG.isDebugEnabled()) LOG.debug("Fetched URL");
-        return d;
-    }
-
-    protected Element getElement(URL url) throws SocketTimeoutException, DocumentException, IOException, ParserConfigurationException, SAXException {
+    protected Element getElement(URL url) throws SocketTimeoutException, IOException, ParserConfigurationException, SAXException {
         return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(getInputStream(url)).getDocumentElement();
     }
 
-    protected InputStream getInputStream(URL url) throws SocketTimeoutException, DocumentException, IOException {
+    protected InputStream getInputStream(URL url) throws SocketTimeoutException, IOException {
         if (LOG.isDebugEnabled()) LOG.debug("Fetching URL: " + url);
         Proxy proxy = options.getProxy();
         URLConnection urlCon;

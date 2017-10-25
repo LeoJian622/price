@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import javax.xml.parsers.ParserConfigurationException;
-import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
@@ -43,7 +42,7 @@ public abstract class AbstractPricingFast extends AbstractPricing {
     }
 
     protected abstract URL getURL(Collection<Integer> itemIDs) throws 
-            SocketTimeoutException, DocumentException, IOException;
+            SocketTimeoutException, IOException;
 
     protected abstract Map<Integer, PriceContainer> extractPrices(Element element);
 
@@ -64,10 +63,6 @@ public abstract class AbstractPricingFast extends AbstractPricing {
             Element element = getElement(url);
             returnMap.putAll(extractPrices(element));
         } catch (SocketTimeoutException ex) {
-            //Critical failure
-            LOG.error("Error fetching price", ex);
-            addFailureReasons(itemIDs, ex.getMessage());
-        } catch (DocumentException ex) {
             //Critical failure
             LOG.error("Error fetching price", ex);
             addFailureReasons(itemIDs, ex.getMessage());

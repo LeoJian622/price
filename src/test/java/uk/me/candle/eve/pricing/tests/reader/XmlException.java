@@ -22,16 +22,16 @@ package uk.me.candle.eve.pricing.tests.reader;
 
 
 public class XmlException extends Exception {
-	public XmlException(final String message) {
-		super(message);
-	}
+    public XmlException(final String message) {
+        super(message);
+    }
 
-	public XmlException(final String message, final Throwable cause) {
-		super(message, cause);
-	}
+    public XmlException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
 
-	public XmlException(final Throwable cause) {
-		super(cause);
-	}
+    public XmlException(final Throwable cause) {
+        super(cause);
+    }
 
 }

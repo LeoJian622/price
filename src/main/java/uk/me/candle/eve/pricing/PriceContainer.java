@@ -40,16 +40,16 @@ public class PriceContainer implements java.io.Serializable {
     }
 
     public double getPrice(PricingType type, PricingNumber number) {
-		// null pointer/contains checks because if the internet
-		// connection is removed during a fetch, this will consistantly
-		// throw a null pointer exception.
-		// http://code.google.com/p/jeveassets/issues/detail?id=130
-		if (prices.containsKey(type)
-				&& prices.get(type).containsKey(number)) {
-			return prices.get(type).get(number);
-		} else {
-			return 0.0;
-		}
+        // null pointer/contains checks because if the internet
+        // connection is removed during a fetch, this will consistantly
+        // throw a null pointer exception.
+        // http://code.google.com/p/jeveassets/issues/detail?id=130
+        if (prices.containsKey(type)
+                && prices.get(type).containsKey(number)) {
+            return prices.get(type).get(number);
+        } else {
+            return 0.0;
+        }
     }
 
     public PriceContainerBuilder createClone() {
@@ -84,10 +84,10 @@ public class PriceContainer implements java.io.Serializable {
 
         public PriceContainer build() {
             if (pricesTemp.isEmpty()) {
-				return null;
-			} else {
-				return new PriceContainer(pricesTemp);
-			}
+                return null;
+            } else {
+                return new PriceContainer(pricesTemp);
+            }
         }
     }
 }

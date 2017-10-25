@@ -16,14 +16,14 @@ public class SplitList {
     private int index;
     private int size;
     private int lastSize;
-	private double splitSize;
+    private double splitSize;
 
     public SplitList(Collection<Integer> fullList) {
         this.fullList = new ArrayList<Integer>(fullList);
         size = fullList.size();
         lastSize = 0;
         index = 0;
-		splitSize = 2;
+        splitSize = 2;
         done = false;
     }
 
@@ -41,23 +41,23 @@ public class SplitList {
             if (done) { //We are done here
                 return false;
             }
-			index = 0;
-			if (lastSize == fullList.size()) { //Nothing Removed - skip a step
-				//Exponential search
-				splitSize = splitSize * splitSize;
-				//Binary search
-				//splitSize = 2;
-			}
-			//No search
-			//size = 2;
-			//Search
-			size = (int) Math.ceil(size / splitSize);
-			//Make lists
+            index = 0;
+            if (lastSize == fullList.size()) { //Nothing Removed - skip a step
+                //Exponential search
+                splitSize = splitSize * splitSize;
+                //Binary search
+                //splitSize = 2;
+            }
+            //No search
+            //size = 2;
+            //Search
+            size = (int) Math.ceil(size / splitSize);
+            //Make lists
             split = split(fullList, size);
             if (split.size() == fullList.size()) {
                 done = true;
             }
-			lastSize = fullList.size();
+            lastSize = fullList.size();
         }
         return true;
     }

@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import org.dom4j.DocumentException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -103,7 +102,7 @@ public class EveMarketData extends AbstractPricingFast {
     }
 
     @Override
-    protected URL getURL(Collection<Integer> itemIDs) throws SocketTimeoutException, DocumentException, IOException {
+    protected URL getURL(Collection<Integer> itemIDs) throws SocketTimeoutException, IOException {
         StringBuilder query = new StringBuilder();
 
         query.append("char_name=Golden%20Gnu&buysell=a");

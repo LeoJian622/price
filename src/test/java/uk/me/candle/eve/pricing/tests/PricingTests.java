@@ -20,12 +20,11 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
+import ch.qos.logback.classic.Level;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
@@ -43,17 +42,23 @@ import uk.me.candle.eve.pricing.tests.reader.ItemsReader;
  */
 public class PricingTests {
 
+    protected static void setLoggingLevel(Level level) {
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+        root.setLevel(level);
+    }
+
     @BeforeClass
     public static void setUpClass() {
         System.setProperty("http.agent", "Price");
-        Logger.getRootLogger().setLevel(Level.ERROR);
+        System.setProperty("log.home", "");
+        setLoggingLevel(Level.ERROR);
         //Logger.getRootLogger().setLevel(Level.INFO);
         //Logger.getRootLogger().setLevel(Level.DEBUG);
     }
 
     @AfterClass
     public static void tearDownClass() {
-        Logger.getRootLogger().setLevel(Level.INFO);
+        setLoggingLevel(Level.INFO);
     }
 
     private static final int PRICES = -1; //-1 for all

@@ -34,11 +34,11 @@ public interface PricingOptions {
     public LocationType getLocationType();
     public PricingType getPricingType();
     public PricingNumber getPricingNumber();
-	/**
-	 * Binary search is a legacy feature used when eve-central returned an error on unknown IDs
-	 * Eve-Central now fails silently, so the feature is not needed anymore, but, may still be useful in the future.
-	 * @return true to do binary search for error ID(s) - false to add failed ID(s) back into the queue and keep trying until getAttemptCount() is reached
-	 */
+    /**
+     * Binary search is a legacy feature used when eve-central returned an error on unknown IDs
+     * Eve-Central now fails silently, so the feature is not needed anymore, but, may still be useful in the future.
+     * @return true to do binary search for error ID(s) - false to add failed ID(s) back into the queue and keep trying until getAttemptCount() is reached
+     */
     public boolean getUseBinaryErrorSearch();
     /**
      * return the input stream to read the price cache from.

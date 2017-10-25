@@ -24,10 +24,12 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Collection;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Node;
-import uk.me.candle.eve.pricing.AbstractPricingEasy;
+import java.util.HashMap;
+import java.util.Map;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import uk.me.candle.eve.pricing.AbstractPricingFast;
+import uk.me.candle.eve.pricing.PriceContainer;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingType;
@@ -36,48 +38,57 @@ import uk.me.candle.eve.pricing.options.PricingType;
  *
  * @author Candle
  */
-public class EveCentral extends AbstractPricingEasy {
+public class EveCentral extends AbstractPricingFast {
 
     public EveCentral(int threads) {
         super(threads);
     }
 
     @Override
-    protected Node getNode(Document d, int typeID, PricingType type, PricingNumber number) {
-        StringBuilder xPath = new StringBuilder("/evec_api/marketstat/type[@id=\"");
-        xPath.append(typeID);
-        xPath.append("\"]/");
-        switch (number) {
-        case BUY:
-            xPath.append("buy/");
-            break;
-        case SELL:
-            xPath.append("sell/");
-            break;
-        default:
-            throw new UnsupportedOperationException("Unable to use the 'number': " + number);
-        }
-        switch (type) {
-        case HIGH:
-            xPath.append("max");
-            break;
-        case LOW:
-            xPath.append("min");
-            break;
-        case MEAN:
-            xPath.append("avg");
-            break;
-        case MEDIAN:
-            xPath.append("median");
-            break;
-        case PERCENTILE:
-            xPath.append("percentile");
-            break;
-        default:
-            throw new UnsupportedOperationException("Unable to use the 'type': " + type);
-        }
+    protected Map<Integer, PriceContainer> extractPrices(Element element) {
+        Map<Integer, PriceContainer.PriceContainerBuilder> builders = new HashMap<Integer, PriceContainer.PriceContainerBuilder>();
+        NodeList types = element.getElementsByTagName("type");
+        for (int i = 0; i < types.getLength(); i++) { //Read prices from XML
+            Element type = (Element) types.item(i);
+            if (type == null) {
+                continue;
+            }
+            org.w3c.dom.Node typeIdNode = type.getAttributes().getNamedItem("id");
+            if (typeIdNode == null) {
+                continue;
+            }
+            Integer typeID = Integer.valueOf(typeIdNode.getNodeValue()) ;
+            if (typeID == null) {
+                continue;
+            }
+            PriceContainer.PriceContainerBuilder builder = builders.get(typeID);
+            if (builder == null) {
+                builder = new PriceContainer.PriceContainerBuilder();
+                builders.put(typeID, builder);
+            }
+            Element buy  = getElementByTagName(type, "buy");
+            add(buy, "avg", builder, PricingType.MEAN, PricingNumber.BUY);
+            add(buy, "median", builder, PricingType.MEDIAN, PricingNumber.BUY);
+            add(buy, "percentile", builder, PricingType.PERCENTILE, PricingNumber.BUY);
+            add(buy, "max", builder, PricingType.HIGH, PricingNumber.BUY);
+            add(buy, "min", builder, PricingType.LOW, PricingNumber.BUY);
 
-        return d.selectSingleNode(xPath.toString());
+            Element sell = getElementByTagName(type, "sell");
+            add(sell, "avg", builder, PricingType.MEAN, PricingNumber.SELL);
+            add(sell, "median", builder, PricingType.MEDIAN, PricingNumber.SELL);
+            add(sell, "percentile", builder, PricingType.PERCENTILE, PricingNumber.SELL);
+            add(sell, "max", builder, PricingType.HIGH, PricingNumber.SELL);
+            add(sell, "min", builder, PricingType.LOW, PricingNumber.SELL);
+          }
+        //Build prices
+        Map<Integer, PriceContainer> prices = new HashMap<Integer, PriceContainer>();
+        for (Map.Entry<Integer, PriceContainer.PriceContainerBuilder> entry : builders.entrySet()) {
+            PriceContainer container = entry.getValue().build();
+            if (container != null) {
+                prices.put(entry.getKey(), container);
+            }
+        }
+        return prices;
     }
 
     @Override
@@ -86,7 +97,7 @@ public class EveCentral extends AbstractPricingEasy {
     }
 
     @Override
-    protected URL getURL(Collection<Integer> itemIDs) throws SocketTimeoutException, DocumentException, IOException {
+    protected URL getURL(Collection<Integer> itemIDs) throws SocketTimeoutException, IOException {
         StringBuilder query = new StringBuilder();
 
         //TypeIDs
@@ -115,5 +126,45 @@ public class EveCentral extends AbstractPricingEasy {
         query.append("&hours=96");
 
         return new URL("https://api.eve-central.com/api/marketstat?" + query.toString());
+    }
+
+    private Element getElementByTagName(Element parent, String name) {
+        if (parent == null || name == null) {
+            return null;
+        }
+        NodeList nodeList = parent.getElementsByTagName(name);
+        if (nodeList.getLength() == 1) {
+            return (Element) nodeList.item(0);
+        } else {
+            return null;
+        }
+    }
+
+    private void add(Element parent, String name, PriceContainer.PriceContainerBuilder builder, PricingType type, PricingNumber number) {
+        if (parent == null || name == null || builder == null) {
+            return;
+        }
+        NodeList nodeList = parent.getElementsByTagName(name);
+        if (nodeList == null) {
+            return;
+        }
+        if (nodeList.getLength() != 1) {
+            return;
+        }
+        Element element = (Element) nodeList.item(0);
+        if (element == null) {
+            return;
+        }
+        String textContent = element.getTextContent();
+        if (textContent == null) {
+            return;
+        }
+        double price;
+        try {
+            price = Double.valueOf(textContent);
+        } catch (NumberFormatException ex) {
+            return;
+        }
+        builder.putPrice(type, number, price);
     }
 }

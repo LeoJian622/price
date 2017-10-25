@@ -22,25 +22,25 @@ package uk.me.candle.eve.pricing.tests.reader;
 
 
 public class ReprocessedMaterial {
-	private final int typeID; //TypeID : int
-	private final int quantity;
-	private final int portionSize;
+    private final int typeID; //TypeID : int
+    private final int quantity;
+    private final int portionSize;
 
-	public ReprocessedMaterial(final int typeID, final int quantity, final int portionSize) {
-		this.typeID = typeID;
-		this.quantity = quantity;
-		this.portionSize = portionSize;
-	}
+    public ReprocessedMaterial(final int typeID, final int quantity, final int portionSize) {
+        this.typeID = typeID;
+        this.quantity = quantity;
+        this.portionSize = portionSize;
+    }
 
-	public int getTypeID() {
-		return typeID;
-	}
+    public int getTypeID() {
+        return typeID;
+    }
 
-	public int getPortionSize() {
-		return portionSize;
-	}
+    public int getPortionSize() {
+        return portionSize;
+    }
 
-	public int getQuantity() {
-		return quantity;
-	}
+    public int getQuantity() {
+        return quantity;
+    }
 }

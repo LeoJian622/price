@@ -30,14 +30,10 @@ import uk.me.candle.eve.pricing.options.PricingOptions;
 public class PricingFactory {
     static EveCentral eveCentral;
     static EveMarketData eveMarketData;
-    static EveMarketeer eveMarketeer;
     static EveMarketer eveMarketer;
-    static EveAddicts eveAddicts;
 
     public static Pricing getPricing(PricingOptions options) {
         switch (options.getPricingFetchImplementation()) {
-            case EVEMARKETEER: return getEveMarketeer(options);
-            case EVE_ADDICTS: return getEveAddicts(options);
             case EVE_CENTRAL: return getEveCentral(options);
             case EVE_MARKETDATA: return getEveMarketData(options);
             case EVEMARKETER: return getEveMarketer(options);
@@ -56,17 +52,6 @@ public class PricingFactory {
         }
         return eveMarketData;
     }
-    private static Pricing getEveMarketeer(PricingOptions options) {
-        if (eveMarketeer == null) {
-            eveMarketeer = new EveMarketeer(1);
-        } else {
-            eveMarketeer.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            eveMarketeer.setPricingOptions(options);
-        }
-        return eveMarketeer;
-    }
     private static Pricing getEveMarketer(PricingOptions options) {
         if (eveMarketer == null) {
             eveMarketer = new EveMarketer(2);
@@ -81,23 +66,10 @@ public class PricingFactory {
     private static Pricing getEveCentral(PricingOptions options) {
         if (eveCentral == null) {
             eveCentral = new EveCentral(1);
-        } else {
-            eveCentral.resetAllAttemptCounters();
         }
         if (options != null) {
             eveCentral.setPricingOptions(options);
         }
         return eveCentral;
-    }
-    private static Pricing getEveAddicts(PricingOptions options) {
-        if (eveAddicts == null) {
-            eveAddicts = new EveAddicts(1);
-        } else {
-            eveAddicts.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            eveAddicts.setPricingOptions(options);
-        }
-        return eveAddicts;
     }
 }

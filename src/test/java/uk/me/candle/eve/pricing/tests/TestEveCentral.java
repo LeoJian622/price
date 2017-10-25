@@ -27,11 +27,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
+import javax.xml.parsers.ParserConfigurationException;
 import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveCentral;
@@ -161,8 +162,10 @@ public class TestEveCentral extends PricingTests {
         }
 
         @Override
-        protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-            throw  new DocumentException("Test");
+        protected Element getElement(URL url) throws SocketTimeoutException, IOException, ParserConfigurationException, SAXException {
+            throw new ParserConfigurationException("TESTING EXCEPTION");
         }
+
+        
     }
 }

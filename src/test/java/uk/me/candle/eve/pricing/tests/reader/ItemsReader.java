@@ -32,73 +32,73 @@ import org.w3c.dom.NodeList;
 
 public final class ItemsReader extends AbstractXmlReader {
 
-	private static final Logger LOG = LoggerFactory.getLogger(ItemsReader.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ItemsReader.class);
 
-	private ItemsReader() { }
+    private ItemsReader() { }
 
-	public static Map<Integer, Item> load() {
-		ItemsReader reader = new ItemsReader();
-		return reader.read();
-	}
+    public static Map<Integer, Item> load() {
+        ItemsReader reader = new ItemsReader();
+        return reader.read();
+    }
 
-	private Map<Integer, Item> read() {
-		try {
-			Map<Integer, Item> items = new HashMap<Integer, Item>();
-			Element element = getDocumentElement("items.xml", false);
-			parseItems(element, items);
-			return items;
-		} catch (IOException ex) {
-			LOG.error("Items not loaded: " + ex.getMessage(), ex);
-		} catch (XmlException ex) {
-			LOG.error("Items not loaded: " + ex.getMessage(), ex);
-		}
-		LOG.info("Items loaded");
-		return null;
-	}
+    private Map<Integer, Item> read() {
+        try {
+            Map<Integer, Item> items = new HashMap<Integer, Item>();
+            Element element = getDocumentElement("items.xml", false);
+            parseItems(element, items);
+            return items;
+        } catch (IOException ex) {
+            LOG.error("Items not loaded: " + ex.getMessage(), ex);
+        } catch (XmlException ex) {
+            LOG.error("Items not loaded: " + ex.getMessage(), ex);
+        }
+        LOG.info("Items loaded");
+        return null;
+    }
 
-	private void parseItems(final Element element, final Map<Integer, Item> items) {
-		NodeList nodes = element.getElementsByTagName("row");
-		Item item;
-		for (int i = 0; i < nodes.getLength(); i++) {
-			Element itemElement = (Element) nodes.item(i);
-			item = parseItem(itemElement);
-			parseMaterials(itemElement, item);
-			items.put(item.getTypeID(), item);
-		}
-	}
+    private void parseItems(final Element element, final Map<Integer, Item> items) {
+        NodeList nodes = element.getElementsByTagName("row");
+        Item item;
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element itemElement = (Element) nodes.item(i);
+            item = parseItem(itemElement);
+            parseMaterials(itemElement, item);
+            items.put(item.getTypeID(), item);
+        }
+    }
 
-	private Item parseItem(final Node node) {
-		int id = AttributeGetters.getInt(node, "id");
-		String name = AttributeGetters.getString(node, "name");
-		String group = AttributeGetters.getString(node, "group");
-		String category = AttributeGetters.getString(node, "category");
-		long price = AttributeGetters.getLong(node, "price");
-		float volume = AttributeGetters.getFloat(node, "volume");
-		int meta = AttributeGetters.getInt(node, "meta");
-		String tech = AttributeGetters.getString(node, "tech");
-		boolean marketGroup = AttributeGetters.getBoolean(node, "marketgroup");
-		boolean piMaterial = AttributeGetters.getBoolean(node, "pi");
-		int portion = AttributeGetters.getInt(node, "portion");
-		int product;
-		if (AttributeGetters.haveAttribute(node, "product")) {
-			product = AttributeGetters.getInt(node, "product");
-		} else {
-			product = 0;
-		}
-		return new Item(id, name, group, category, price, volume, meta, tech, marketGroup, piMaterial, portion, product);
-	}
+    private Item parseItem(final Node node) {
+        int id = AttributeGetters.getInt(node, "id");
+        String name = AttributeGetters.getString(node, "name");
+        String group = AttributeGetters.getString(node, "group");
+        String category = AttributeGetters.getString(node, "category");
+        long price = AttributeGetters.getLong(node, "price");
+        float volume = AttributeGetters.getFloat(node, "volume");
+        int meta = AttributeGetters.getInt(node, "meta");
+        String tech = AttributeGetters.getString(node, "tech");
+        boolean marketGroup = AttributeGetters.getBoolean(node, "marketgroup");
+        boolean piMaterial = AttributeGetters.getBoolean(node, "pi");
+        int portion = AttributeGetters.getInt(node, "portion");
+        int product;
+        if (AttributeGetters.haveAttribute(node, "product")) {
+            product = AttributeGetters.getInt(node, "product");
+        } else {
+            product = 0;
+        }
+        return new Item(id, name, group, category, price, volume, meta, tech, marketGroup, piMaterial, portion, product);
+    }
 
-	private void parseMaterials(final Element element, final Item item) {
-		NodeList nodes = element.getElementsByTagName("material");
-		for (int i = 0; i < nodes.getLength(); i++) {
-			parseMaterial(nodes.item(i), item);
-		}
-	}
+    private void parseMaterials(final Element element, final Item item) {
+        NodeList nodes = element.getElementsByTagName("material");
+        for (int i = 0; i < nodes.getLength(); i++) {
+            parseMaterial(nodes.item(i), item);
+        }
+    }
 
-	private void parseMaterial(final Node node, final Item item) {
-		int id = AttributeGetters.getInt(node, "id");
-		int quantity = AttributeGetters.getInt(node, "quantity");
-		int portionSize = AttributeGetters.getInt(node, "portionsize");
-		item.addReprocessedMaterial(new ReprocessedMaterial(id, quantity, portionSize));
-	}
+    private void parseMaterial(final Node node, final Item item) {
+        int id = AttributeGetters.getInt(node, "id");
+        int quantity = AttributeGetters.getInt(node, "quantity");
+        int portionSize = AttributeGetters.getInt(node, "portionsize");
+        item.addReprocessedMaterial(new ReprocessedMaterial(id, quantity, portionSize));
+    }
 }

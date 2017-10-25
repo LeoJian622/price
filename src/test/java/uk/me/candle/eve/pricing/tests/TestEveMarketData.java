@@ -27,9 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.dom.DOMElement;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.w3c.dom.Element;
@@ -134,13 +131,8 @@ public class TestEveMarketData extends PricingTests {
         }
 
         @Override
-        protected Document getDocument(URL url) throws SocketTimeoutException, DocumentException, IOException {
-            throw  new DocumentException("Test");
-        }
-
-        @Override
-        protected Element getElement(URL url) throws SocketTimeoutException, DocumentException, IOException, ParserConfigurationException, SAXException {
-            return new DOMElement("Hmm");
+        protected Element getElement(URL url) throws SocketTimeoutException, IOException, ParserConfigurationException, SAXException {
+            throw new ParserConfigurationException("TESTING EXCEPTION");
         }
 
     }
