@@ -52,6 +52,16 @@ public enum PricingFetch {
             PricingType[] pricingTypes = {PricingType.PERCENTILE};
             return pricingTypes;
         }
+    },
+    FUZZWORK {
+        @Override
+        public PricingNumber[] getSupportedPricingNumbers() {
+            return PricingNumber.values();
+        }
+        @Override
+        public PricingType[] getSupportedPricingTypes() {
+            return PricingType.values();
+        }
     };
     public abstract PricingNumber[] getSupportedPricingNumbers();
     public abstract PricingType[] getSupportedPricingTypes();
