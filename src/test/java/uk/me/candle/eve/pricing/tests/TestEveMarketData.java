@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -44,7 +45,7 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
  */
 public class TestEveMarketData extends PricingTests {
 
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineRegion() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
@@ -63,7 +64,7 @@ public class TestEveMarketData extends PricingTests {
         testAll(pricing);
     }
 
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineSystem() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
@@ -82,7 +83,7 @@ public class TestEveMarketData extends PricingTests {
         testAll(pricing);
     }
 
-    @Test
+    @Test @Ignore
     public void testGetPriceOnlineStation() {
         Pricing pricing = PricingFactory.getPricing(new DefaultPricingOptions() {
             @Override
