@@ -69,7 +69,7 @@ public class PricingFactory {
         if (eveCentral == null) {
             eveCentral = new EveCentral(1);
         } else {
-            eveMarketData.resetAllAttemptCounters();
+            eveCentral.resetAllAttemptCounters();
         }
         if (options != null) {
             eveCentral.setPricingOptions(options);
@@ -80,7 +80,7 @@ public class PricingFactory {
         if (fuzzwork == null) {
             fuzzwork = new Fuzzwork(2);
         } else {
-            eveMarketData.resetAllAttemptCounters();
+            fuzzwork.resetAllAttemptCounters();
         }
         if (options != null) {
             fuzzwork.setPricingOptions(options);
