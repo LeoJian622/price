@@ -20,11 +20,19 @@
  */
 package uk.me.candle.eve.pricing.tests;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingFactory;
+import uk.me.candle.eve.pricing.impl.Fuzzwork;
 import uk.me.candle.eve.pricing.options.LocationType;
 import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
@@ -66,6 +74,43 @@ public class TestFuzzwork extends PricingTests {
             }
         });
         testAll(pricing);
+    }
+
+    @Test
+    public void testGetPriceFail() {
+        final Fuzzwork pricing = new FuzzworkEmptyDummy();
+        pricing.setPricingOptions(new DefaultPricingOptions() {
+            @Override
+            public List<Long> getLocations() {
+                return Collections.singletonList(10000002L);
+            }
+            @Override
+            public LocationType getLocationType() {
+                return LocationType.REGION;
+            }
+            @Override
+            public PricingFetch getPricingFetchImplementation() {
+                return PricingFetch.FUZZWORK;
+            }
+        });
+        pricing.setPrice(34, -1d);
+        Set<Integer> failed = synchronousPriceFetch(pricing, 34);
+        assertEquals(failed.size(), 1);
+    }
+
+    class FuzzworkEmptyDummy extends Fuzzwork {
+
+        public FuzzworkEmptyDummy() {
+            super(1);
+        }
+
+        @Override
+        protected InputStream getInputStream(Collection<Integer> itemIDs) throws MalformedURLException, IOException {
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+       
+
     }
 
 }

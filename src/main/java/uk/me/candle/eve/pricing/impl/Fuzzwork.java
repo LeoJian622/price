@@ -23,6 +23,7 @@ package uk.me.candle.eve.pricing.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -61,10 +62,7 @@ public class Fuzzwork extends AbstractPricing {
         }
         try {
             ObjectMapper mapper = new ObjectMapper(); //create once, reuse
-            URL url = getURL(itemIDs);
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            Map<Integer, FuzzworkPrice> results = mapper.readValue(con.getInputStream(), new TypeReference<Map<Integer, FuzzworkPrice>>() {
-            });
+            Map<Integer, FuzzworkPrice> results = mapper.readValue(getInputStream(itemIDs), new TypeReference<Map<Integer, FuzzworkPrice>>() {});
             if (results == null) {
                 return returnMap;
             }
@@ -74,10 +72,14 @@ public class Fuzzwork extends AbstractPricing {
             }
             return returnMap;
         } catch (IOException ex) {
-            System.out.println("ex: " + ex.getMessage());
-            ex.printStackTrace();
             return returnMap;
         }
+    }
+
+    protected InputStream getInputStream(Collection<Integer> itemIDs) throws MalformedURLException, IOException {
+        URL url = getURL(itemIDs);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        return con.getInputStream();
     }
 
     protected URL getURL(Collection<Integer> itemIDs) throws MalformedURLException {
