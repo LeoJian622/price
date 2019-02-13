@@ -80,7 +80,7 @@ public class EveMarketerTest extends PricingTests {
 
     @Test
     public void testGetPriceFail() {
-        System.out.println("Testing EveMarketer errors");
+        System.out.println("Testing EVEMARKETER errors");
         final EveMarketer pricing = new EveMarketerEmptyDummy();
         pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override

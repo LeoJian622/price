@@ -78,6 +78,7 @@ public class TestFuzzwork extends PricingTests {
 
     @Test
     public void testGetPriceFail() {
+        System.out.println("Testing FUZZWORK errors");
         final Fuzzwork pricing = new FuzzworkEmptyDummy();
         pricing.setPricingOptions(new DefaultPricingOptions() {
             @Override
@@ -106,11 +107,8 @@ public class TestFuzzwork extends PricingTests {
 
         @Override
         protected InputStream getInputStream(Collection<Integer> itemIDs) throws MalformedURLException, IOException {
-            return new ByteArrayInputStream(new byte[0]);
+            throw new IOException("TESTING EXCEPTION");
         }
 
-       
-
     }
-
 }
