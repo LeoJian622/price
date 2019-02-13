@@ -132,7 +132,7 @@ public class TestEveCentral extends PricingTests {
         testAll(pricing);
     }
 
-    @Test
+    @Test @Ignore
     public void testGetPriceFail() {
         System.out.println("Testing EVE_CENTRAL errors");
         final EveCentral pricing = new EveCentralEmptyDummy();
