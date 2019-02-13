@@ -31,6 +31,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.me.candle.eve.pricing.AbstractPricing;
 import uk.me.candle.eve.pricing.PriceContainer;
 import uk.me.candle.eve.pricing.options.LocationType;
@@ -39,6 +41,8 @@ import uk.me.candle.eve.pricing.options.PricingType;
 
 
 public class Fuzzwork extends AbstractPricing {
+
+    private static final Logger LOG = LoggerFactory.getLogger(Fuzzwork.class);
 
     public Fuzzwork(int threads) {
         super(threads);
@@ -64,19 +68,22 @@ public class Fuzzwork extends AbstractPricing {
             ObjectMapper mapper = new ObjectMapper(); //create once, reuse
             Map<Integer, FuzzworkPrice> results = mapper.readValue(getInputStream(itemIDs), new TypeReference<Map<Integer, FuzzworkPrice>>() {});
             if (results == null) {
+                LOG.error("Error fetching price", new Exception("results is null"));
+                addFailureReasons(itemIDs, "results is null");
                 return returnMap;
             }
             //Updated OK
             for (Map.Entry<Integer, FuzzworkPrice> entry : results.entrySet()) {
                 returnMap.put(entry.getKey(), entry.getValue().getPriceContainer());
             }
-            return returnMap;
         } catch (IOException ex) {
-            return returnMap;
+            LOG.error("Error fetching price", ex);
+            addFailureReasons(itemIDs, ex.getMessage());
         }
+        return returnMap;
     }
 
-    protected InputStream getInputStream(Collection<Integer> itemIDs) throws MalformedURLException, IOException {
+    protected InputStream getInputStream(Collection<Integer> itemIDs) throws IOException {
         URL url = getURL(itemIDs);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         return con.getInputStream();
