@@ -34,7 +34,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 import uk.me.candle.eve.pricing.Pricing;
-import uk.me.candle.eve.pricing.PricingFactory;
 import uk.me.candle.eve.pricing.impl.EveMarketer;
 import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
@@ -60,9 +59,10 @@ public class ReadWriteTest extends PricingTests {
         //Create file data to read
         typeIDs = getTypeIDs(PRICES);
         pricing = new EveMarketer(2); //need new instant to complete faster
-        Set<Integer> prices = synchronousPriceFetch(pricing, typeIDs);
-        assertEquals(0, prices.size());
+        Set<Integer> failed = synchronousPriceFetch(pricing, typeIDs);
+        assertEquals(0, failed.size());
         try {
+            pricing.setPricingOptions(readWriteOptions);
             pricing.writeCache();
         } catch (IOException ex) {
             fail(ex.getMessage());
@@ -77,9 +77,6 @@ public class ReadWriteTest extends PricingTests {
     }
 
     public void testReadWrite() {
-        
-        
-
         //Create threads
         List<Thread> threads = new ArrayList<Thread>();
         threads.add(new Update());
@@ -125,7 +122,7 @@ public class ReadWriteTest extends PricingTests {
             try {
                 pricing.writeCache();
             } catch (IOException ex) {
-                fail(ex.getMessage());
+                throw new RuntimeException(ex);
             }
         }
     }
@@ -138,7 +135,7 @@ public class ReadWriteTest extends PricingTests {
 
         @Override
         public void run() {
-            Set<Integer> prices = synchronousPriceFetch(pricing, typeIDs);
+            Set<Integer> failed = synchronousPriceFetch(pricing, typeIDs);
         }
     }
 
