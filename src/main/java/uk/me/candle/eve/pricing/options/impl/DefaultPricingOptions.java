@@ -46,7 +46,7 @@ public class DefaultPricingOptions implements PricingOptions {
 
     @Override
     public PricingFetch getPricingFetchImplementation() {
-        return PricingFetch.EVE_MARKETDATA;
+        return PricingFetch.EVEMARKETER;
     }
 
     @Override
