@@ -21,10 +21,8 @@
 package uk.me.candle.eve.pricing;
 
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -404,84 +402,86 @@ public abstract class AbstractPricing implements Pricing {
                             this.wait();
                         }
                     }
-                    notifyPricingFetchListeners(true);
-
-                    //Do a binary search for the failed IDs
-                    if (failed != null) {
-                        List<Integer> nextList = failed.getNextList();
-                        if (nextList != null) { //Next list
-                            evaluate.addAll(nextList);
-                        } else { //List is empty - do we need to do it again?
-                            failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
-                        }
-                    }
-                    // fill the queue that is waiting, up to the size of the batch size.
-                    // A = queueSize > 0
-                    // B = batchSize > 0
-                    // C = curSize < batchSize
-                    // I need the truth table:
-                    // A B C ==> R
-                    // 0 0 0     0
-                    // 0 0 1     0
-                    // 0 1 0     0
-                    // 0 1 1     0
-                    // 1 0 0     1
-                    // 1 0 1     1
-                    // 1 1 0     0
-                    // 1 1 1     1
-                    // ==> A & ((B & C) | C)
-                    // ==> A & (B | C)
-                    if (LOG.isDebugEnabled()) LOG.debug("There are " + waitingQueue.size() + " items in the queue.");
-                    while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
-                        try {
-                            Integer num = waitingQueue.remove();
-                            if (checkFailureCountExceeded(num)) {
-                                evaluate.add(num);
-                                currentlyEvaluating.add(num);
-                            }
-                        } catch (NoSuchElementException ex) {
-                            //This is not a problem
-                        }
-                    }
-                    if (LOG.isDebugEnabled()) LOG.debug("Starting price fetch for " + evaluate.size() + " items.");
-                    // handle the list.
-                    Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
-                    // for each of the prices, cache, and notify listeners
-                    boolean doBinarySearch = false;
-                    for (Integer itemId : evaluate) {
-                        if (prices.containsKey(itemId)) { //OK
-                            PriceContainer priceContainer = prices.get(itemId);
-                            cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
-                            notifyPricingListeners(itemId);
-                        } else { //Fail
-                            if (options.getUseBinaryErrorSearch()) {
-                                if (evaluate.size() == 1) {
-                                    notifyFailedFetch(itemId);
-                                } else {
-                                    //New Search
-                                    doBinarySearch = true;
-                                }
-                            } else {
-                                addFailureCount(itemId);
-                                waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
-                            }
-                        }
-                    }
-                    if (doBinarySearch && failed == null) { //Start new search for the error
-                        failed = new SplitList(evaluate);
-                    }
-                    if (!doBinarySearch && failed != null) { //OK
-                        failed.removeLast();
-                    }
-                    evaluate.clear();
-                    currentlyEvaluating.clear();
-                    if (LOG.isDebugEnabled()) LOG.debug("finished fetch");
-                    notifyPricingFetchListeners(false);
                 } catch (InterruptedException ie) {
                     LOG.warn("Pricing fetch thread interrupted.");
-                    evaluate.clear();
                     // just continue.
                 }
+                notifyPricingFetchListeners(true);
+
+                //Do a binary search for the failed IDs
+                if (failed != null) {
+                    List<Integer> nextList = failed.getNextList();
+                    if (nextList != null) { //Next list
+                        evaluate.addAll(nextList);
+                    } else { //List is empty - do we need to do it again?
+                        failed = null; //Search is done - We don't want to do it again!!! (you will get banned mate)
+                    }
+                }
+                // fill the queue that is waiting, up to the size of the batch size.
+                // A = queueSize > 0
+                // B = batchSize > 0
+                // C = curSize < batchSize
+                // I need the truth table:
+                // A B C ==> R
+                // 0 0 0     0
+                // 0 0 1     0
+                // 0 1 0     0
+                // 0 1 1     0
+                // 1 0 0     1
+                // 1 0 1     1
+                // 1 1 0     0
+                // 1 1 1     1
+                // ==> A & ((B & C) | C)
+                // ==> A & (B | C)
+                if (LOG.isDebugEnabled()) LOG.debug("There are " + waitingQueue.size() + " items in the queue.");
+                while (failed == null && waitingQueue.size() > 0 && (!(getBatchSize() > 0) || evaluate.size() < getBatchSize())) {
+                    try {
+                        Integer num = waitingQueue.remove();
+                        if (checkFailureCountExceeded(num)) {
+                            evaluate.add(num);
+                            currentlyEvaluating.add(num);
+                        }
+                    } catch (NoSuchElementException ex) {
+                        //This is not a problem
+                    }
+                }
+                if (LOG.isDebugEnabled()) LOG.debug("Starting price fetch for " + evaluate.size() + " items.");
+                // handle the list.
+                Map<Integer, PriceContainer> prices = fetchPrices(evaluate);
+                // for each of the prices, cache, and notify listeners
+                boolean doBinarySearch = false;
+                for (Integer itemId : evaluate) {
+                    if (prices.containsKey(itemId)) { //OK
+                        PriceContainer priceContainer = prices.get(itemId);
+                        cache.put(itemId, new CachedPrice(System.currentTimeMillis(), priceContainer));
+                        notifyPricingListeners(itemId);
+                    } else { //Fail
+                        if (options.getUseBinaryErrorSearch()) {
+                            if (evaluate.size() == 1) {
+                                notifyFailedFetch(itemId);
+                            } else {
+                                //New Search
+                                doBinarySearch = true;
+                            }
+                        } else {
+                            addFailureCount(itemId);
+                            waitingQueue.add(itemId); // add prices that were unable to be fetched back onto the queue.
+                        }
+                    }
+                }
+                if (doBinarySearch && failed == null) { //Start new search for the error
+                    failed = new SplitList(evaluate);
+                }
+                if (!doBinarySearch && failed != null) { //OK
+                    failed.removeLast();
+                }
+                synchronized (currentlyEvaluating) {
+                    currentlyEvaluating.removeAll(evaluate);
+                    currentlyEvaluating.notifyAll();
+                }
+                evaluate.clear();
+                if (LOG.isDebugEnabled()) LOG.debug("finished fetch");
+                notifyPricingFetchListeners(false);
             }
         }
     }
@@ -539,14 +539,24 @@ public abstract class AbstractPricing implements Pricing {
 
     @Override
     public void cancelAll() {
-        Set<Integer> ids = new HashSet<Integer>(waitingQueue); //Save queue items for later
-        waitingQueue.clear(); //Clear queue
-        for (PriceFetchingThread priceFetchingThread : priceFetchingThreads) { //Stop what the threads are doing
-            priceFetchingThread.interrupt();
-        }
-        currentlyEvaluating.clear(); //clear currentlyEvaluating
-        for (Integer itemID : ids) {
-            notifyFailedFetch(itemID); //Notify of failed price updates
+        while (!currentlyEvaluating.isEmpty() || !waitingQueue.isEmpty()) { //While evaluating
+            //Clear queue
+            synchronized (waitingQueue) {
+                while(!waitingQueue.isEmpty()) { 
+                    notifyFailedFetch(waitingQueue.remove()); //Notify of failed price updates
+                }
+            }
+            //Wait for evaluating to finish
+            synchronized (currentlyEvaluating) { 
+                try {
+                    if (!currentlyEvaluating.isEmpty()) { //If evaluating
+                        currentlyEvaluating.wait(); //wait to finish
+                    }
+                } catch (InterruptedException ex) {
+                   //Continue
+                }
+            }
+            
         }
     }
 

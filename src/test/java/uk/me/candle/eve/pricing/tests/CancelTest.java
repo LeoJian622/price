@@ -23,7 +23,9 @@ package uk.me.candle.eve.pricing.tests;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -35,8 +37,10 @@ import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 
 public class CancelTest extends PricingTests {
+
+    private static final int ITERATIONS = 5;
+
     private static Pricing pricing;
-    private static final long DELAY = 500;
 
     @BeforeClass
     public static void setUpClass() {
@@ -52,18 +56,27 @@ public class CancelTest extends PricingTests {
             }
             @Override
             public PricingFetch getPricingFetchImplementation() {
-                return PricingFetch.EVE_MARKETDATA;
+                return PricingFetch.EVEMARKETER;
             }
         });
     }
 
     @Test
     public void testCancel() {
-        System.out.println("Testing cancel recovery (fast)");
+        Random rand = new Random();
+        test(500);
+        for (int i = 0; i < ITERATIONS; i++) {
+            int n = rand.nextInt(9000) + 1000;
+            test(n);
+        }
+    }
+
+    private void test(int delay) {
+        System.out.println("Testing cancel recovery (" + delay + "ms)");
         PricingTests.SynchronousPriceListener listener = new PricingTests.SynchronousPriceListener(pricing, getTypeIDs());
         listener.start();
         try {
-            Thread.sleep(DELAY);
+            Thread.sleep(delay);
         } catch (InterruptedException ex) {
             fail("Thread interrupted");
         }
@@ -73,6 +86,7 @@ public class CancelTest extends PricingTests {
         } catch (InterruptedException ex) {
             fail("Thread interrupted");
         }
+        assertTrue(listener.getFailed().size() > 1000);
         assertEquals(listener.getFailed().size() + listener.getOK().size(), listener.getTypeIDs().size());
     }
 }
