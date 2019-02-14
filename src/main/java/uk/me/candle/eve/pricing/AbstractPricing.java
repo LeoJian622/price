@@ -542,8 +542,12 @@ public abstract class AbstractPricing implements Pricing {
         while (!currentlyEvaluating.isEmpty() || !waitingQueue.isEmpty()) { //While evaluating
             //Clear queue
             synchronized (waitingQueue) {
-                while(!waitingQueue.isEmpty()) { 
-                    notifyFailedFetch(waitingQueue.remove()); //Notify of failed price updates
+                while(!waitingQueue.isEmpty()) {
+                    try {
+                        notifyFailedFetch(waitingQueue.remove()); //Notify of failed price updates
+                    } catch (NoSuchElementException ex) {
+                        //This is not a problem
+                    }
                 }
             }
             //Wait for evaluating to finish
