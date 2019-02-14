@@ -70,6 +70,7 @@ public class PricingTests {
     }
 
     public Set<Integer> synchronousPriceFetch(Pricing pricing, Set<Integer> typeIDs) {
+        long time = System.currentTimeMillis();
         SynchronousPriceListener listener = new SynchronousPriceListener(pricing, typeIDs);
         listener.start();
         try {
@@ -77,6 +78,7 @@ public class PricingTests {
         } catch (InterruptedException ex) {
             fail(ex.getMessage());
         }
+        System.out.println("    " + listener.getOK().size() + " of " + typeIDs.size() + " done - " + listener.getFailed().size() + " failed - " + listener.getEmpty().size() + " empty - completed in " + formatTime(System.currentTimeMillis() - time));
         return listener.getFailed();
     }
 
@@ -85,6 +87,7 @@ public class PricingTests {
         private final Set<Integer> typeIDs;
         private final Set<Integer> ok;
         private final Set<Integer> failed;
+        private final Set<Integer> empty;
         private final Pricing pricing;
 
         public SynchronousPriceListener(Pricing pricing, Set<Integer> typeIDs) {
@@ -94,10 +97,15 @@ public class PricingTests {
             this.queue = Collections.synchronizedSet(new HashSet<Integer>(typeIDs));
             this.ok = Collections.synchronizedSet(new HashSet<Integer>());
             this.failed = Collections.synchronizedSet(new HashSet<Integer>());
+            this.empty = Collections.synchronizedSet(new HashSet<Integer>());
         }
 
         public Set<Integer> getFailed() {
             return failed;
+        }
+
+        public Set<Integer> getEmpty() {
+            return empty;
         }
 
         public Set<Integer> getOK() {
@@ -133,14 +141,21 @@ public class PricingTests {
 
         private void getPrice(Pricing pricing, int typeID) {
             boolean done = true;
+            boolean isEmpty = true;
             PricingFetch pricingFetchImpl = pricing.getPricingOptions().getPricingFetchImplementation();
             for (PricingNumber number : pricingFetchImpl.getSupportedPricingNumbers()) {
                 for (PricingType type : pricingFetchImpl.getSupportedPricingTypes()) {
                     Double price = pricing.getPrice(typeID, type, number);
+                    if (price != 0) {
+                        isEmpty = false;
+                    }
                     if (price == null) {
                         done = false;
                     }
                 }
+            }
+            if (isEmpty) {
+                empty.add(typeID);
             }
             if (done) {
                 ok.add(typeID);
@@ -180,10 +195,8 @@ public class PricingTests {
                 );
 
         //will be zero:
-        long time = System.currentTimeMillis();
         Set<Integer> typeIDs = getTypeIDs();
         Set<Integer> failed = synchronousPriceFetch(pricing, typeIDs);
-        System.out.println("    " + (typeIDs.size() - failed.size()) + " of " + typeIDs.size() + " done - " + failed.size() + " failed - completed in " + formatTime(System.currentTimeMillis() - time));
         assertTrue(failed.isEmpty());
     }
 
