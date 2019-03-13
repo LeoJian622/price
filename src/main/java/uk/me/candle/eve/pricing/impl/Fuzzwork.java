@@ -20,10 +20,13 @@
  */
 package uk.me.candle.eve.pricing.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -65,8 +68,8 @@ public class Fuzzwork extends AbstractPricing {
             return returnMap;
         }
         try {
-            ObjectMapper mapper = new ObjectMapper(); //create once, reuse
-            Map<Integer, FuzzworkPrice> results = mapper.readValue(getInputStream(itemIDs), new TypeReference<Map<Integer, FuzzworkPrice>>() {});
+            Gson gson = new GsonBuilder().create();
+            Map<Integer, FuzzworkPrice> results = gson.fromJson(new InputStreamReader(getInputStream(itemIDs)), new TypeToken<Map<Integer, FuzzworkPrice>>() {}.getType());
             if (results == null) {
                 LOG.error("Error fetching price", new Exception("results is null"));
                 addFailureReasons(itemIDs, "results is null");
