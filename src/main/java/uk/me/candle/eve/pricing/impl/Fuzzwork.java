@@ -22,6 +22,7 @@ package uk.me.candle.eve.pricing.impl;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,7 +79,7 @@ public class Fuzzwork extends AbstractPricing {
             for (Map.Entry<Integer, FuzzworkPrice> entry : results.entrySet()) {
                 returnMap.put(entry.getKey(), entry.getValue().getPriceContainer());
             }
-        } catch (IOException ex) {
+        } catch (IllegalArgumentException | IOException | JsonParseException ex) {
             LOG.error("Error fetching price", ex);
             addFailureReasons(itemIDs, ex.getMessage());
         }
