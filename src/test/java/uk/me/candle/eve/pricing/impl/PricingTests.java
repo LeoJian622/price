@@ -31,8 +31,8 @@ import org.junit.BeforeClass;
 import uk.me.candle.eve.pricing.Pricing;
 import uk.me.candle.eve.pricing.PricingListener;
 import uk.me.candle.eve.pricing.options.PriceLocation;
-import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.PriceType;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.impl.DefaultLocation;
 import uk.me.candle.eve.pricing.utils.Item;
 import uk.me.candle.eve.pricing.utils.ItemsReader;
@@ -46,6 +46,8 @@ public class PricingTests {
     public static final PriceLocation REGION_THE_FORGE = new DefaultLocation(10000002L, 10000002L);  //The Forge
     public static final PriceLocation SYSTEM_JITA = new DefaultLocation(10000002L, 30000142L);  //Jita
     public static final PriceLocation STATION_JITA_4_4 = new DefaultLocation(10000002L, 60003760L);  //Jita 4-4
+
+    private static final int PRICES = 500; //-1 for all
 
     protected static void setLoggingLevel(Level level) {
         ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
@@ -63,8 +65,6 @@ public class PricingTests {
     public static void tearDownClass() {
         setLoggingLevel(Level.INFO);
     }
-
-    private static final int PRICES = 5000; //-1 for all
 
     private Map<Integer, Item> items;
 
