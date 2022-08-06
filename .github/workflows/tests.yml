@@ -24,4 +24,6 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
     - name: Build with Maven
+      env:
+        JANICE_API_KEY: ${{ secrets.JANICE_API_KEY }}
       run: mvn install
