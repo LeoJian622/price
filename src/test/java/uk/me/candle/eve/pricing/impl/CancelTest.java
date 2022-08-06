@@ -49,7 +49,7 @@ public class CancelTest extends PricingTests {
     @BeforeClass
     public static void setUpClass() {
         PricingTests.setUpClass();
-        pricing = PricingFactory.getPricing(PricingFetch.FUZZWORK, new DefaultPricingOptions() {
+        pricing = PricingFactory.getPricing(PricingFetch.EVE_TYCOON, new DefaultPricingOptions() {
             @Override
             public PriceLocation getLocation() {
                 return REGION_THE_FORGE;
@@ -71,7 +71,7 @@ public class CancelTest extends PricingTests {
     private void test(int delay) {
         long time = System.currentTimeMillis();
         System.out.println("Testing cancel recovery (" + delay + "ms)");
-        Set<Integer> typeIDs = getTypeIDs(-1);
+        Set<Integer> typeIDs = getTypeIDs(500);
         PricingTests.SynchronousPriceListener listener = new PricingTests.SynchronousPriceListener(pricing, typeIDs);
         listener.start();
         try {
