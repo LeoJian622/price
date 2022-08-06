@@ -24,16 +24,29 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Proxy;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public interface PricingOptions {
+
+    final Map<String, String> headers = new HashMap<>();
+
     public long getPriceCacheTimer();
-    public PricingFetch getPricingFetchImplementation();
-    public List<Long> getLocations();
+    public PriceLocation getLocation();
+    default Long getLocationID() {
+        if (getLocation() == null) {
+            return null;
+        }
+        return getLocation().getLocationID();
+    }
+    default Long getRegionID() {
+        if (getLocation() == null) {
+            return null;
+        }
+        return getLocation().getRegionID();
+    }
     public LocationType getLocationType();
-    public PricingType getPricingType();
-    public PricingNumber getPricingNumber();
     /**
      * Binary search is a legacy feature used when eve-central returned an error on unknown IDs
      * Eve-Central now fails silently, so the feature is not needed anymore, but, may still be useful in the future.
@@ -75,8 +88,22 @@ public interface PricingOptions {
     public int getAttemptCount();
 
     /**
+     * User Agent header to send to price providers
+     * @return
+     */
+    public String getUserAgent();
+
+    /**
      * Connection timeout in milliseconds
-     * @return 
+     * @return
      */
     public int getTimeout();
+
+    default void addHeader(String header, String value) {
+        headers.put(header, value);
+    }
+
+    default Map<String, String> getHeaders() {
+        return headers;
+    }
 }

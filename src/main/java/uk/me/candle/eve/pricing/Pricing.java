@@ -23,9 +23,10 @@ package uk.me.candle.eve.pricing;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import uk.me.candle.eve.pricing.options.PricingNumber;
+import uk.me.candle.eve.pricing.options.LocationType;
+import uk.me.candle.eve.pricing.options.PriceType;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.PricingOptions;
-import uk.me.candle.eve.pricing.options.PricingType;
 
 /**
  *
@@ -42,27 +43,18 @@ public interface Pricing {
     /**
      *
      * @param itemID
+     * @param type the type of price: buy price or sell price
      * @return null if the price needs fetching or a Double representing the price.
      */
-    public Double getPrice(int itemID);
+    public Double getPriceCache(int itemID, PriceType type);
 
     /**
      *
      * @param itemID
      * @param type the type of price: buy price or sell price
-     * @param number the style of number, min/max/mean/median
      * @return null if the price needs fetching or a Double representing the price.
      */
-    public Double getPriceCache(int itemID, PricingType type, PricingNumber number);
-
-    /**
-     *
-     * @param itemID
-     * @param type the type of price: buy price or sell price
-     * @param number the style of number, min/max/mean/median
-     * @return null if the price needs fetching or a Double representing the price.
-     */
-    public Double getPrice(int itemID, PricingType type, PricingNumber number);
+    public Double getPrice(int itemID, PriceType type);
 
     public boolean removePricingListener(PricingListener o);
     public boolean addPricingListener(PricingListener pl);
@@ -71,12 +63,11 @@ public interface Pricing {
 
     /**
      * to unset a price, and queue it for fetching again, set the price to negative.
-     * @param itemID
-     * @param price
+     * @param typeID
      */
-    public void setPrice(int itemID, Double price);
-    public void setPrice(int itemID, PricingType type, PricingNumber number, Double price);
+    public void clearPrice(int typeID);
 
+    public PricingFetch getPricingFetchImplementation();
     /**
      * set the options that this pricing implementation should use.
      * @param options
@@ -136,4 +127,22 @@ public interface Pricing {
      * @return a list of error messages or an empty list if there were no errors.
      */
     public List<String> getFetchErrors(int typeID);
+
+    /**
+     * Supported PricingTypes.
+     * @return
+     */
+    public List<PriceType> getSupportedPricingTypes();
+    /**
+     * Supported LocationTypes.
+     * @return
+     */
+    public List<LocationType> getSupportedLocationTypes();
+
+    /**
+     *
+     * @param locationType
+     * @return List of support locationIDs. Empty list if all is support. Null if LocationType is not supported.
+     */
+    public List<Long> getSupportedLocations(LocationType locationType);
 }

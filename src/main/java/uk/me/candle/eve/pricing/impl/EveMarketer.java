@@ -20,73 +20,68 @@
  */
 package uk.me.candle.eve.pricing.impl;
 
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import uk.me.candle.eve.pricing.AbstractPricingFast;
+import okhttp3.Call;
+import okhttp3.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.me.candle.eve.pricing.AbstractPricing;
 import uk.me.candle.eve.pricing.PriceContainer;
 import uk.me.candle.eve.pricing.options.LocationType;
-import uk.me.candle.eve.pricing.options.PricingNumber;
-import uk.me.candle.eve.pricing.options.PricingType;
+import uk.me.candle.eve.pricing.options.PriceType;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 
 
-public class EveMarketer extends AbstractPricingFast {
+public class EveMarketer extends AbstractPricing {
 
-    public EveMarketer(int threads) {
-        super(threads);
+    private static final Logger LOG = LoggerFactory.getLogger(EveMarketer.class);
+
+    public EveMarketer() {
+        super(2);
     }
 
     @Override
-    protected Map<Integer, PriceContainer> extractPrices(Element element) {
-        Map<Integer, PriceContainer.PriceContainerBuilder> builders = new HashMap<Integer, PriceContainer.PriceContainerBuilder>();
-        NodeList types = element.getElementsByTagName("type");
-        for (int i = 0; i < types.getLength(); i++) { //Read prices from XML
-            Element type = (Element) types.item(i);
-            if (type == null) {
-                continue;
-            }
-            Node typeIdNode = type.getAttributes().getNamedItem("id");
-            if (typeIdNode == null) {
-                continue;
-            }
-            Integer typeID = Integer.valueOf(typeIdNode.getNodeValue()) ;
-            if (typeID == null) {
-                continue;
-            }
-            PriceContainer.PriceContainerBuilder builder = builders.get(typeID);
-            if (builder == null) {
-                builder = new PriceContainer.PriceContainerBuilder();
-                builders.put(typeID, builder);
-            }
-            Element buy  = getElementByTagName(type, "buy");
-            add(buy, "avg", builder, PricingType.MEAN, PricingNumber.BUY);
-            add(buy, "median", builder, PricingType.MEDIAN, PricingNumber.BUY);
-            add(buy, "percentile", builder, PricingType.PERCENTILE, PricingNumber.BUY);
-            add(buy, "max", builder, PricingType.HIGH, PricingNumber.BUY);
-            add(buy, "min", builder, PricingType.LOW, PricingNumber.BUY);
+    public PricingFetch getPricingFetchImplementation() {
+        return PricingFetch.EVEMARKETER;
+    }
 
-            Element sell = getElementByTagName(type, "sell");
-            add(sell, "avg", builder, PricingType.MEAN, PricingNumber.SELL);
-            add(sell, "median", builder, PricingType.MEDIAN, PricingNumber.SELL);
-            add(sell, "percentile", builder, PricingType.PERCENTILE, PricingNumber.SELL);
-            add(sell, "max", builder, PricingType.HIGH, PricingNumber.SELL);
-            add(sell, "min", builder, PricingType.LOW, PricingNumber.SELL);
-          }
-        //Build prices
-        Map<Integer, PriceContainer> prices = new HashMap<Integer, PriceContainer>();
-        for (Map.Entry<Integer, PriceContainer.PriceContainerBuilder> entry : builders.entrySet()) {
-            PriceContainer container = entry.getValue().build();
-            if (container != null) {
-                prices.put(entry.getKey(), container);
-            }
+    @Override
+    public List<PriceType> getSupportedPricingTypes() {
+        List<PriceType> types = new ArrayList<>();
+        types.add(PriceType.BUY_MEAN);
+        types.add(PriceType.BUY_MEDIAN);
+        types.add(PriceType.BUY_PERCENTILE);
+        types.add(PriceType.BUY_HIGH);
+        types.add(PriceType.BUY_LOW);
+        types.add(PriceType.SELL_MEAN);
+        types.add(PriceType.SELL_MEDIAN);
+        types.add(PriceType.SELL_PERCENTILE);
+        types.add(PriceType.SELL_HIGH);
+        types.add(PriceType.SELL_LOW);
+        return types;
+    }
+
+    @Override
+    public List<LocationType> getSupportedLocationTypes() {
+        List<LocationType> types = new ArrayList<>();
+        types.add(LocationType.REGION);
+        types.add(LocationType.SYSTEM);
+        return types;
+    }
+
+    @Override
+    public List<Long> getSupportedLocations(LocationType locationType) {
+        if (getSupportedLocationTypes().contains(locationType)) {
+            return new ArrayList<>();
         }
-        return prices;
+        return null;
     }
 
     @Override
@@ -95,74 +90,132 @@ public class EveMarketer extends AbstractPricingFast {
     }
 
     @Override
-    protected URL getURL(final Collection<Integer> itemIDs) throws SocketTimeoutException, IOException {
+    protected Map<Integer, PriceContainer> fetchPrices(Collection<Integer> typeIDs) {
+        //Validate
+        Map<Integer, PriceContainer> returnMap = new HashMap<>();
+        if (typeIDs.isEmpty()) {
+            return returnMap;
+        }
+        if (getPricingOptions().getLocation() == null) {
+            throw new UnsupportedOperationException("A location is required for EveMarketer");
+        }
+        LocationType locationType = getPricingOptions().getLocationType();
+        if (!getSupportedLocationTypes().contains(locationType)) {
+            throw new UnsupportedOperationException(locationType + " is not supported by EveMarketer");
+        }
+        //Update
+        try {
+            List<Type> results = getGSON().fromJson(getCall(typeIDs).execute().body().string(), new TypeToken<List<Type>>(){}.getType());
+            if (results == null) {
+                LOG.error("Error fetching price", new Exception("results is null"));
+                addFailureReasons(typeIDs, "results is null");
+                return returnMap;
+            }
+            //Updated OK
+            for (Type item : results) {
+                returnMap.put(item.getTypeID(), item.getPriceContainer());
+            }
+            if (typeIDs.size() != returnMap.size()) {
+                List<Integer> errors = new ArrayList<>(typeIDs);
+                errors.removeAll(returnMap.keySet());
+                PriceContainer container = new PriceContainer.PriceContainerBuilder().build();
+                for (Integer typeID : errors) {
+                    returnMap.put(typeID, container);
+                }
+            }
+        } catch (IllegalArgumentException | IOException | JsonParseException ex) {
+            LOG.error("Error fetching price", ex);
+            addFailureReasons(typeIDs, ex.getMessage());
+        }
+        return returnMap;
+    }
+
+    public Call getCall(Collection<Integer> typeIDs) {
+        Request.Builder request = new Request.Builder()
+                .url(getURL(typeIDs))
+                .addHeader("User-Agent", getPricingOptions().getUserAgent());
+        //Headers
+        for (Map.Entry<String, String> entry : getPricingOptions().getHeaders().entrySet()) {
+            request.addHeader(entry.getKey(), entry.getValue());
+        }
+        return getClient().newCall(request.build());
+    }
+
+    protected String getURL(final Collection<Integer> typeIDs) {
         StringBuilder query = new StringBuilder();
         //TypeIDs
         query.append("&typeid=");
         boolean comma = false;
-        for (Integer i : itemIDs) {
+        for (Integer i : typeIDs) {
             if (comma) {
-                query.append(',');;
+                query.append(',');
             } else {
                 comma = true;
             }
             query.append(i);
         }
         //Location
-        if (getPricingOptions().getLocationType() == LocationType.STATION) {
-            throw new UnsupportedOperationException(LocationType.STATION.name() + " is not supported by EveCentral");
-        } else if (getPricingOptions().getLocationType() == LocationType.SYSTEM
-                   && !getPricingOptions().getLocations().isEmpty()) { //Not empty
+        LocationType locationType = getPricingOptions().getLocationType();
+        if (locationType == LocationType.STATION) {
+            throw new UnsupportedOperationException(locationType + " is not supported by EveMarketer");
+        } else if (locationType == LocationType.SYSTEM) { //Not empty
             query.append("&usesystem=");
-            query.append(getPricingOptions().getLocations().get(0));
-
-        } else if (getPricingOptions().getLocationType() == LocationType.REGION) {
-            for (Long l : getPricingOptions().getLocations()) { //Region(s)
-                query.append("&regionlimit=");
-                query.append(l);
-            }
+            query.append(getPricingOptions().getLocationID());
+        } else if (locationType == LocationType.REGION) {
+            query.append("&regionlimit=");
+            query.append(getPricingOptions().getLocationID());
+        } else {
+            throw new UnsupportedOperationException(locationType.name() + " is not supported by EveMarketer");
         }
         //Max order age
-        return new URL("https://api.evemarketer.com/ec/marketstat?" + query.toString());
+        return "https://api.evemarketer.com/ec/marketstat/json?" + query.toString();
     }
 
-    private Element getElementByTagName(Element parent, String name) {
-        if (parent == null || name == null) {
-            return null;
+    private static class Type {
+        TypeStat buy;
+        TypeStat sell;
+        public int getTypeID() {
+            return buy.forQuery.types.get(0);
         }
-        NodeList nodeList = parent.getElementsByTagName(name);
-        if (nodeList.getLength() == 1) {
-            return (Element) nodeList.item(0);
-        } else {
-            return null;
+        public PriceContainer getPriceContainer() {
+            PriceContainer.PriceContainerBuilder builder = new PriceContainer.PriceContainerBuilder();
+            builder.putPrice(PriceType.BUY_MEAN, buy.avg);
+            builder.putPrice(PriceType.BUY_MEDIAN, buy.median);
+            builder.putPrice(PriceType.BUY_PERCENTILE, buy.fivePercent);
+            builder.putPrice(PriceType.BUY_HIGH, buy.max);
+            builder.putPrice(PriceType.BUY_LOW, buy.min);
+
+            builder.putPrice(PriceType.SELL_MEAN, sell.avg);
+            builder.putPrice(PriceType.SELL_MEDIAN, sell.median);
+            builder.putPrice(PriceType.SELL_PERCENTILE, sell.fivePercent);
+            builder.putPrice(PriceType.SELL_HIGH, sell.max);
+            builder.putPrice(PriceType.SELL_LOW, sell.min);
+            return builder.build();
         }
     }
 
-    private void add(Element parent, String name, PriceContainer.PriceContainerBuilder builder, PricingType type, PricingNumber number) {
-        if (parent == null || name == null || builder == null) {
-            return;
-        }
-        NodeList nodeList = parent.getElementsByTagName(name);
-        if (nodeList == null) {
-            return;
-        }
-        if (nodeList.getLength() != 1) {
-            return;
-        }
-        Element element = (Element) nodeList.item(0);
-        if (element == null) {
-            return;
-        }
-        String textContent = element.getTextContent();
-        if (textContent == null) {
-            return;
-        }
-        double price;
-        try {
-            price = Double.valueOf(textContent);
-        } catch (NumberFormatException ex) {
-            return;
-        }
-        builder.putPrice(type, number, price);
+
+    private static class TypeStat {
+        ForQuery forQuery;
+        double max;
+        double median;
+        long generated;
+        double variance;
+        double min;
+        double avg;
+        double stdDev;
+        double fivePercent;
+        boolean highToLow;
+        long volume;
+        double wavg;
+    }
+
+    private static class ForQuery {
+        boolean bid;
+        List<Integer> types = new ArrayList<>();
+        List<Integer> regions = new ArrayList<>();
+        List<Integer> systems = new ArrayList<>();
+        Integer hours;
+        Integer minq;
     }
 }

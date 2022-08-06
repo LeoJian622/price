@@ -20,50 +20,60 @@
  */
 package uk.me.candle.eve.pricing.options;
 
+import java.util.List;
+import uk.me.candle.eve.pricing.Pricing;
+import uk.me.candle.eve.pricing.impl.EveMarketer;
+import uk.me.candle.eve.pricing.impl.EveTycoon;
+import uk.me.candle.eve.pricing.impl.Fuzzwork;
+import uk.me.candle.eve.pricing.impl.Janice;
+
 
 public enum PricingFetch {
-    EVE_CENTRAL {
-        @Override
-        public PricingNumber[] getSupportedPricingNumbers() {
-            return PricingNumber.values();
-        }
-        @Override
-        public PricingType[] getSupportedPricingTypes() {
-            return PricingType.values();
-        }
-    },
     EVEMARKETER {
         @Override
-        public PricingNumber[] getSupportedPricingNumbers() {
-            return PricingNumber.values();
-        }
-        @Override
-        public PricingType[] getSupportedPricingTypes() {
-            return PricingType.values();
-        }
-    },
-    EVE_MARKETDATA {
-        @Override
-        public PricingNumber[] getSupportedPricingNumbers() {
-            return PricingNumber.values();
-        }
-        @Override
-        public PricingType[] getSupportedPricingTypes() {
-            PricingType[] pricingTypes = {PricingType.PERCENTILE};
-            return pricingTypes;
+        public Pricing getNewInstance() {
+            return new EveMarketer();
         }
     },
     FUZZWORK {
         @Override
-        public PricingNumber[] getSupportedPricingNumbers() {
-            return PricingNumber.values();
+        public Pricing getNewInstance() {
+            return new Fuzzwork();
         }
+    },
+    EVE_TYCOON {
         @Override
-        public PricingType[] getSupportedPricingTypes() {
-            return PricingType.values();
+        public Pricing getNewInstance() {
+            return new EveTycoon();
         }
-    };
-    public abstract PricingNumber[] getSupportedPricingNumbers();
-    public abstract PricingType[] getSupportedPricingTypes();
-    
+    },
+    JANICE() {
+        @Override
+        public Pricing getNewInstance() {
+            return new Janice();
+        }
+    },
+    ;
+    private Pricing pricing;
+
+    public Pricing getPricing(PricingOptions options) {
+        if (pricing == null) {
+            pricing = getNewInstance();
+        } else {
+            pricing.resetAllAttemptCounters();
+        }
+        if (options != null) {
+            pricing.setPricingOptions(options);
+        }
+        return pricing;
+    }
+
+    protected abstract Pricing getNewInstance();
+
+    public List<PriceType> getSupportedPricingTypes() {
+        return getNewInstance().getSupportedPricingTypes();
+    }
+    public List<LocationType> getSupportedLocationTypes() {
+        return getNewInstance().getSupportedLocationTypes();
+    }
 }

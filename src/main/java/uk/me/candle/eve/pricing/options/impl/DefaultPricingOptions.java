@@ -24,13 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Proxy;
-import java.util.Collections;
-import java.util.List;
 import uk.me.candle.eve.pricing.options.LocationType;
-import uk.me.candle.eve.pricing.options.PricingFetch;
-import uk.me.candle.eve.pricing.options.PricingNumber;
+import uk.me.candle.eve.pricing.options.PriceLocation;
 import uk.me.candle.eve.pricing.options.PricingOptions;
-import uk.me.candle.eve.pricing.options.PricingType;
 
 /**
  *
@@ -45,13 +41,8 @@ public class DefaultPricingOptions implements PricingOptions {
     }
 
     @Override
-    public PricingFetch getPricingFetchImplementation() {
-        return PricingFetch.EVEMARKETER;
-    }
-
-    @Override
-    public List<Long> getLocations() {
-        return Collections.singletonList(new Long(10000002)); // The Forge
+    public PriceLocation getLocation() {
+        return new DefaultLocation(10000002L, 10000002L); // The Forge
     }
 
     @Override
@@ -60,23 +51,13 @@ public class DefaultPricingOptions implements PricingOptions {
     }
 
     @Override
-    public PricingType getPricingType() {
-        return PricingType.LOW;
-    }
-
-    @Override
-    public PricingNumber getPricingNumber() {
-        return PricingNumber.SELL;
-    }
-
-    @Override
     public InputStream getCacheInputStream() throws IOException {
-        return null; //return new FileInputStream(new File("pricing.serial"));
+        return null;
     }
 
     @Override
     public OutputStream getCacheOutputStream() throws IOException {
-        return null; //return new FileOutputStream(new File("pricing.serial"));
+        return null;
     }
 
     @Override
@@ -104,4 +85,12 @@ public class DefaultPricingOptions implements PricingOptions {
         return 20000;
     }
 
+    @Override
+    public String getUserAgent() {
+        String userAgent = System.getProperty("http.agent");
+        if (userAgent == null) {
+            userAgent = "Price/slack:@goldengnu";
+        }
+        return userAgent;
+    }
 }

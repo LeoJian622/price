@@ -20,40 +20,36 @@
  */
 package uk.me.candle.eve.pricing.impl;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import okhttp3.Call;
+import okhttp3.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.me.candle.eve.pricing.AbstractPricing;
 import uk.me.candle.eve.pricing.PriceContainer;
 import uk.me.candle.eve.pricing.options.LocationType;
-import uk.me.candle.eve.pricing.options.PricingNumber;
-import uk.me.candle.eve.pricing.options.PricingType;
+import uk.me.candle.eve.pricing.options.PriceType;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 
 
 public class Fuzzwork extends AbstractPricing {
 
     private static final Logger LOG = LoggerFactory.getLogger(Fuzzwork.class);
 
-    public Fuzzwork(int threads) {
-        super(threads);
+    public Fuzzwork() {
+        super(2);
     }
 
     @Override
-    protected PriceContainer fetchPrice(int itemID) {
-        return fetchPrices(Collections.singletonList(itemID)).get(itemID);
+    public PricingFetch getPricingFetchImplementation() {
+        return PricingFetch.FUZZWORK;
     }
 
     @Override
@@ -62,41 +58,62 @@ public class Fuzzwork extends AbstractPricing {
     }
 
     @Override
-    protected Map<Integer, PriceContainer> fetchPrices(Collection<Integer> itemIDs) {
-        Map<Integer, PriceContainer> returnMap = new HashMap<Integer, PriceContainer>();
-        if (itemIDs.isEmpty()) {
+    public List<PriceType> getSupportedPricingTypes() {
+        List<PriceType> types = new ArrayList<>();
+        types.add(PriceType.BUY_MEAN);
+        types.add(PriceType.BUY_MEDIAN);
+        types.add(PriceType.BUY_PERCENTILE);
+        types.add(PriceType.BUY_HIGH);
+        types.add(PriceType.BUY_LOW);
+        types.add(PriceType.SELL_MEAN);
+        types.add(PriceType.SELL_MEDIAN);
+        types.add(PriceType.SELL_PERCENTILE);
+        types.add(PriceType.SELL_HIGH);
+        types.add(PriceType.SELL_LOW);
+        return types;
+    }
+
+    @Override
+    public List<LocationType> getSupportedLocationTypes() {
+        List<LocationType> types = new ArrayList<>();
+        types.add(LocationType.REGION);
+        types.add(LocationType.STATION);
+        return types;
+    }
+
+    @Override
+    public List<Long> getSupportedLocations(LocationType locationType) {
+        if (getSupportedLocationTypes().contains(locationType)) {
+            if (locationType == LocationType.STATION) {
+                List<Long> list = new ArrayList<>();
+                list.add(60003760L); //Jita 4-4 CNAP
+                list.add(60008494L); //Amarr VIII
+                list.add(60011866L); //Dodixie
+                list.add(60004588L); //Rens
+                list.add(60005686L); //Hek
+            } else {
+                return new ArrayList<>();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected Map<Integer, PriceContainer> fetchPrices(Collection<Integer> typeIDs) {
+        //Validate
+        Map<Integer, PriceContainer> returnMap = new HashMap<>();
+        if (typeIDs.isEmpty()) {
             return returnMap;
         }
-        try {
-            Gson gson = new GsonBuilder().create();
-            Map<Integer, FuzzworkPrice> results = gson.fromJson(new InputStreamReader(getInputStream(itemIDs)), new TypeToken<Map<Integer, FuzzworkPrice>>() {}.getType());
-            if (results == null) {
-                LOG.error("Error fetching price", new Exception("results is null"));
-                addFailureReasons(itemIDs, "results is null");
-                return returnMap;
-            }
-            //Updated OK
-            for (Map.Entry<Integer, FuzzworkPrice> entry : results.entrySet()) {
-                returnMap.put(entry.getKey(), entry.getValue().getPriceContainer());
-            }
-        } catch (IllegalArgumentException | IOException | JsonParseException ex) {
-            LOG.error("Error fetching price", ex);
-            addFailureReasons(itemIDs, ex.getMessage());
+        if (getPricingOptions().getLocation() == null) {
+            throw new UnsupportedOperationException("A location is required for Fuzzwork");
         }
-        return returnMap;
-    }
-
-    protected InputStream getInputStream(Collection<Integer> itemIDs) throws IOException {
-        URL url = getURL(itemIDs);
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        return con.getInputStream();
-    }
-
-    protected URL getURL(Collection<Integer> itemIDs) throws MalformedURLException {
-        StringBuilder query = new StringBuilder();
-        if (getPricingOptions().getLocationType() == LocationType.STATION //Station
-            && !getPricingOptions().getLocations().isEmpty()) { //Not empty
-            Long locationID = getPricingOptions().getLocations().get(0);
+        LocationType locationType = getPricingOptions().getLocationType();
+        if (!getSupportedLocationTypes().contains(locationType)) {
+            throw new UnsupportedOperationException(locationType + " is not supported by Fuzzwork");
+        }
+        if (locationType == LocationType.STATION) { //Station
+            long locationID = getPricingOptions().getLocationID();
             if (   locationID != 60003760 //Jita 4-4 CNAP
                 && locationID != 60008494 //Amarr VIII
                 && locationID != 60011866 //Dodixie
@@ -105,18 +122,58 @@ public class Fuzzwork extends AbstractPricing {
                 ) {
                 throw new UnsupportedOperationException(locationID + " is not supported by Fuzzwork");
             }
-            if (query.length() > 0) query.append('&');
-            query.append("station=");
-            query.append(getPricingOptions().getLocations().get(0));
-        } else if (getPricingOptions().getLocationType() == LocationType.SYSTEM) { //System
-            throw new UnsupportedOperationException(LocationType.STATION.name() + " is not supported by Fuzzwork");
-        } else if (getPricingOptions().getLocationType() == LocationType.REGION
-                && !getPricingOptions().getLocations().isEmpty()) { //Not empty
-            if (query.length() > 0) query.append('&');
-            query.append("region=");
-            query.append(getPricingOptions().getLocations().get(0));
         }
+        //Update
+        try {
+            Map<Integer, FuzzworkPrice> results = getGSON().fromJson(getCall(typeIDs).execute().body().string(), new TypeToken<Map<Integer, FuzzworkPrice>>() {}.getType());
+            if (results == null) {
+                LOG.error("Error fetching price", new Exception("results is null"));
+                addFailureReasons(typeIDs, "results is null");
+                return returnMap;
+            }
+            //Updated OK
+            for (Map.Entry<Integer, FuzzworkPrice> entry : results.entrySet()) {
+                returnMap.put(entry.getKey(), entry.getValue().getPriceContainer());
+            }
+        } catch (IllegalArgumentException | IOException | JsonParseException ex) {
+            LOG.error("Error fetching price", ex);
+            addFailureReasons(typeIDs, ex.getMessage());
+        }
+        return returnMap;
+    }
 
+    public Call getCall(Collection<Integer> typeIDs) {
+        Request.Builder request = new Request.Builder()
+                .url(getURL(typeIDs))
+                .addHeader("User-Agent", getPricingOptions().getUserAgent());
+        //Headers
+        for (Map.Entry<String, String> entry : getPricingOptions().getHeaders().entrySet()) {
+            request.addHeader(entry.getKey(), entry.getValue());
+        }
+        return getClient().newCall(request.build());
+    }
+
+    protected String getURL(Collection<Integer> itemIDs) {
+        StringBuilder query = new StringBuilder();
+        LocationType locationType = getPricingOptions().getLocationType();
+        if (locationType == LocationType.STATION) { //Station
+            long locationID = getPricingOptions().getLocationID();
+            if (   locationID != 60003760 //Jita 4-4 CNAP
+                && locationID != 60008494 //Amarr VIII
+                && locationID != 60011866 //Dodixie
+                && locationID != 60004588 //Rens
+                && locationID != 60005686 //Hek
+                ) {
+                throw new UnsupportedOperationException(locationID + " is not supported by Fuzzwork");
+            }
+            query.append("station=");
+            query.append(getPricingOptions().getLocationID());
+        } else if (locationType == LocationType.REGION) { //Region
+            query.append("region=");
+            query.append(getPricingOptions().getLocationID());
+        } else { //System/etc.
+            throw new UnsupportedOperationException(locationType.name() + " is not supported by Fuzzwork");
+        }
         query.append("&types=");
         boolean comma = false;
         for (Integer i : itemIDs) {
@@ -124,8 +181,7 @@ public class Fuzzwork extends AbstractPricing {
             query.append(i);
             comma = true;
         }
-
-        return new URL("https://market.fuzzwork.co.uk/aggregates/?" + query.toString());
+        return "https://market.fuzzwork.co.uk/aggregates/?" + query.toString();
     }
 
     private static class FuzzworkPrice {
@@ -134,16 +190,16 @@ public class Fuzzwork extends AbstractPricing {
 
         PriceContainer getPriceContainer() {
             PriceContainer.PriceContainerBuilder builder = new PriceContainer.PriceContainerBuilder();
-            builder.putPrice(PricingType.HIGH, PricingNumber.BUY, buy.max);
-            builder.putPrice(PricingType.LOW, PricingNumber.BUY, buy.min);
-            builder.putPrice(PricingType.MEAN, PricingNumber.BUY, buy.weightedAverage);
-            builder.putPrice(PricingType.MEDIAN, PricingNumber.BUY, buy.median);
-            builder.putPrice(PricingType.PERCENTILE, PricingNumber.BUY, buy.percentile);
-            builder.putPrice(PricingType.HIGH, PricingNumber.SELL, sell.max);
-            builder.putPrice(PricingType.LOW, PricingNumber.SELL, sell.min);
-            builder.putPrice(PricingType.MEAN, PricingNumber.SELL, sell.weightedAverage);
-            builder.putPrice(PricingType.MEDIAN, PricingNumber.SELL, sell.median);
-            builder.putPrice(PricingType.PERCENTILE, PricingNumber.SELL, sell.percentile);
+            builder.putPrice(PriceType.BUY_HIGH, buy.max);
+            builder.putPrice(PriceType.BUY_LOW, buy.min);
+            builder.putPrice(PriceType.BUY_MEAN, buy.weightedAverage);
+            builder.putPrice(PriceType.BUY_MEDIAN, buy.median);
+            builder.putPrice(PriceType.BUY_PERCENTILE, buy.percentile);
+            builder.putPrice(PriceType.SELL_HIGH, sell.max);
+            builder.putPrice(PriceType.SELL_LOW, sell.min);
+            builder.putPrice(PriceType.SELL_MEAN, sell.weightedAverage);
+            builder.putPrice(PriceType.SELL_MEDIAN, sell.median);
+            builder.putPrice(PriceType.SELL_PERCENTILE, sell.percentile);
             return builder.build();
         }
     }
@@ -158,5 +214,5 @@ public class Fuzzwork extends AbstractPricing {
         public double orderCount;
         public double percentile;
     }
-    
+
 }

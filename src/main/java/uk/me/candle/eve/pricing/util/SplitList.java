@@ -19,7 +19,7 @@ public class SplitList {
     private double splitSize;
 
     public SplitList(Collection<Integer> fullList) {
-        this.fullList = new ArrayList<Integer>(fullList);
+        this.fullList = new ArrayList<>(fullList);
         size = fullList.size();
         lastSize = 0;
         index = 0;
@@ -70,13 +70,13 @@ public class SplitList {
     }
 
     public List<Integer> getFullList() {
-        return new ArrayList<Integer>(fullList);
+        return new ArrayList<>(fullList);
     }
 
     private List<List<Integer>> split(List<Integer> in, int partitionSize) {
-        List<List<Integer>> partitions = new ArrayList<List<Integer>>();
+        List<List<Integer>> partitions = new ArrayList<>();
         for (int i = 0; i < in.size(); i += partitionSize) {
-            partitions.add(new ArrayList<Integer>(in.subList(i, i + Math.min(partitionSize, in.size() - i))));
+            partitions.add(new ArrayList<>(in.subList(i, i + Math.min(partitionSize, in.size() - i))));
         }
         return partitions;
     }

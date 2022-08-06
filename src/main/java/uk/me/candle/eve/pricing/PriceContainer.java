@@ -22,6 +22,7 @@ package uk.me.candle.eve.pricing;
 
 import java.util.EnumMap;
 import java.util.Map;
+import uk.me.candle.eve.pricing.options.PriceType;
 import uk.me.candle.eve.pricing.options.PricingNumber;
 import uk.me.candle.eve.pricing.options.PricingType;
 
@@ -31,15 +32,23 @@ public class PriceContainer implements java.io.Serializable {
 
     private final Map<PricingType, Map<PricingNumber, Double>> prices;
 
+    public PriceContainer() {
+        this.prices = new EnumMap<>(PricingType.class);
+    }
+
     private PriceContainer(Map<PricingType, Map<PricingNumber, Double>> prices) {
         this.prices = prices;
     }
 
-    public void putPrice(PricingType type, PricingNumber number, double price) {
-        throw new RuntimeException("not supported");
+    public PriceContainerBuilder createClone() {
+        return PriceContainerBuilder.createClone(this);
     }
 
-    public double getPrice(PricingType type, PricingNumber number) {
+    public Double getPrice(PriceType priceType) {
+        return getPrice(getType(priceType), getNumber(priceType));
+    }
+
+    private double getPrice(PricingType type, PricingNumber number) {
         // null pointer/contains checks because if the internet
         // connection is removed during a fetch, this will consistantly
         // throw a null pointer exception.
@@ -52,13 +61,40 @@ public class PriceContainer implements java.io.Serializable {
         }
     }
 
-    public PriceContainerBuilder createClone() {
-        return PriceContainerBuilder.createClone(this);
+    private static PricingType getType(PriceType priceType) {
+        switch (priceType) {
+            case BUY_HIGH: return PricingType.HIGH;
+            case BUY_LOW: return PricingType.LOW;
+            case BUY_MEAN: return PricingType.MEAN;
+            case BUY_MEDIAN: return PricingType.MEDIAN;
+            case BUY_PERCENTILE: return PricingType.PERCENTILE;
+            case SELL_HIGH: return PricingType.HIGH;
+            case SELL_LOW: return PricingType.LOW;
+            case SELL_MEAN: return PricingType.MEAN;
+            case SELL_MEDIAN: return PricingType.MEDIAN;
+            case SELL_PERCENTILE: return PricingType.PERCENTILE;
+            default: throw new RuntimeException();
+        }
+    }
+
+    private static PricingNumber getNumber(PriceType priceType) {
+        switch (priceType) {
+            case BUY_HIGH: return PricingNumber.BUY;
+            case BUY_LOW: return PricingNumber.BUY;
+            case BUY_MEAN: return PricingNumber.BUY;
+            case BUY_MEDIAN: return PricingNumber.BUY;
+            case BUY_PERCENTILE: return PricingNumber.BUY;
+            case SELL_HIGH: return PricingNumber.SELL;
+            case SELL_LOW: return PricingNumber.SELL;
+            case SELL_MEAN: return PricingNumber.SELL;
+            case SELL_MEDIAN: return PricingNumber.SELL;
+            case SELL_PERCENTILE: return PricingNumber.SELL;
+            default: throw new RuntimeException();
+        }
     }
 
     public static class PriceContainerBuilder {
-
-        Map<PricingType, Map<PricingNumber, Double>> pricesTemp = new EnumMap<PricingType, Map<PricingNumber, Double>>(PricingType.class);
+        Map<PricingType, Map<PricingNumber, Double>> pricesTemp = new EnumMap<>(PricingType.class);
 
         public static PriceContainerBuilder createClone(PriceContainer container) {
             PriceContainerBuilder pcb = new PriceContainerBuilder();
@@ -70,16 +106,20 @@ public class PriceContainer implements java.io.Serializable {
             return pcb;
         }
 
-        public PriceContainerBuilder putPrice(PricingType type, PricingNumber number, double price) {
+        private PriceContainerBuilder putPrice(PricingType type, PricingNumber number, double price) {
             Map<PricingNumber, Double> typeMap;
             if (pricesTemp.containsKey(type)) {
                 typeMap = pricesTemp.get(type);
             } else {
-                typeMap = new EnumMap<PricingNumber, Double>(PricingNumber.class);
+                typeMap = new EnumMap<>(PricingNumber.class);
                 pricesTemp.put(type, typeMap);
             }
             typeMap.put(number, price);
             return this;
+        }
+
+        public PriceContainerBuilder putPrice(PriceType priceType, double price) {
+            return putPrice(getType(priceType), getNumber(priceType), price);
         }
 
         public PriceContainer build() {

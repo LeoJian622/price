@@ -20,71 +20,21 @@
  */
 package uk.me.candle.eve.pricing;
 
-import uk.me.candle.eve.pricing.impl.*;
+import uk.me.candle.eve.pricing.options.PricingFetch;
 import uk.me.candle.eve.pricing.options.PricingOptions;
+import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 
 /**
  *
  * @author Candle
  */
 public class PricingFactory {
-    static EveCentral eveCentral;
-    static EveMarketData eveMarketData;
-    static EveMarketer eveMarketer;
-    static Fuzzwork fuzzwork;
 
-    public static Pricing getPricing(PricingOptions options) {
-        switch (options.getPricingFetchImplementation()) {
-            case EVE_CENTRAL: return getEveCentral(options);
-            case EVE_MARKETDATA: return getEveMarketData(options);
-            case EVEMARKETER: return getEveMarketer(options);
-            case FUZZWORK: return getFuzzwork(options);
-            default: return getEveCentral(options);
-        }
+    public static Pricing getPricing(PricingFetch pricingFetch) {
+        return getPricing(pricingFetch, new DefaultPricingOptions());
     }
 
-    private static Pricing getEveMarketData(PricingOptions options) {
-        if (eveMarketData == null) {
-            eveMarketData = new EveMarketData(2);
-        } else {
-            eveMarketData.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            eveMarketData.setPricingOptions(options);
-        }
-        return eveMarketData;
-    }
-    private static Pricing getEveMarketer(PricingOptions options) {
-        if (eveMarketer == null) {
-            eveMarketer = new EveMarketer(2);
-        } else {
-            eveMarketer.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            eveMarketer.setPricingOptions(options);
-        }
-        return eveMarketer;
-    }
-    private static Pricing getEveCentral(PricingOptions options) {
-        if (eveCentral == null) {
-            eveCentral = new EveCentral(1);
-        } else {
-            eveCentral.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            eveCentral.setPricingOptions(options);
-        }
-        return eveCentral;
-    }
-    private static Pricing getFuzzwork(PricingOptions options) {
-        if (fuzzwork == null) {
-            fuzzwork = new Fuzzwork(2);
-        } else {
-            fuzzwork.resetAllAttemptCounters();
-        }
-        if (options != null) {
-            fuzzwork.setPricingOptions(options);
-        }
-        return fuzzwork;
+    public static Pricing getPricing(PricingFetch pricingFetch, PricingOptions options) {
+        return pricingFetch.getPricing(options);
     }
 }

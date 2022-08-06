@@ -21,6 +21,8 @@
 package uk.me.candle.eve.pricing;
 
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -47,13 +49,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
-import uk.me.candle.eve.pricing.options.PricingNumber;
+import uk.me.candle.eve.pricing.options.PriceType;
 import uk.me.candle.eve.pricing.options.PricingOptions;
-import uk.me.candle.eve.pricing.options.PricingType;
 import uk.me.candle.eve.pricing.options.impl.DefaultPricingOptions;
 import uk.me.candle.eve.pricing.util.SplitList;
 
@@ -67,42 +70,60 @@ public abstract class AbstractPricing implements Pricing {
     /**
      * internal mem-cache of prices.
      */
-    private final Map<Integer, CachedPrice> cache = Collections.synchronizedMap(new HashMap<Integer, CachedPrice>());;
+    private final Map<Integer, CachedPrice> cache = Collections.synchronizedMap(new HashMap<>());;
     /**
      * list of listeners to notify when a price has been fetched.
      */
-    private final List<WeakReference<PricingListener>> pricingListeners = new ArrayList<WeakReference<PricingListener>>();
+    private final List<WeakReference<PricingListener>> pricingListeners = new ArrayList<>();
     /**
      * list of listeners to notify when a fetch is starting and finishing.
      */
-    private final List<WeakReference<PricingFetchListener>> pricingFetchListeners = new ArrayList<WeakReference<PricingFetchListener>>();
+    private final List<WeakReference<PricingFetchListener>> pricingFetchListeners = new ArrayList<>();
     /**
-     * queue of itemIDs that are waiting to be fetched
+     * queue of typeIDs that are waiting to be fetched
      */
-    private final Queue<Integer> waitingQueue = new ConcurrentLinkedQueue<Integer>();
+    private final Queue<Integer> waitingQueue = new ConcurrentLinkedQueue<>();
     /**
-     * queue of itemIDs that failed on last fetched
+     * queue of typeIDs that failed on last fetched
      */
     /**
      * list of item IDs that are being fetched - this is here so that we don't queue an ID that is in the process of
      * being fetched.
      */
-    private final List<Integer> currentlyEvaluating = Collections.synchronizedList(new ArrayList<Integer>());
+    private final List<Integer> currentlyEvaluating = Collections.synchronizedList(new ArrayList<>());
     /**
      * single thread that handles the price fetching.
      */
-    private final List<PriceFetchingThread> priceFetchingThreads = Collections.synchronizedList(new ArrayList<PriceFetchingThread>());
+    private final List<PriceFetchingThread> priceFetchingThreads = Collections.synchronizedList(new ArrayList<>());
 
     /**
      * maintains the list of failed attempts to fetch prices.
      */
-    private final Map<Integer, AtomicInteger> failedFetchAttempts = Collections.synchronizedMap(new HashMap<Integer, AtomicInteger>());
+    private final Map<Integer, AtomicInteger> failedFetchAttempts = Collections.synchronizedMap(new HashMap<>());
 
     /**
      * map of reasons why fetching a price has failed.
      */
-    private final Map<Integer, List<String>> failedFetchReasons = Collections.synchronizedMap(new HashMap<Integer, List<String>>());
+    private final Map<Integer, List<String>> failedFetchReasons = Collections.synchronizedMap(new HashMap<>());
 
+    /**
+     * GSON Object
+     */
+    private static final Gson GSON = new GsonBuilder().create();
+
+    /**
+     * HttpLoggingInterceptor
+     */
+    private static final HttpLoggingInterceptor HTTP_LOGGING_INTERCEPTOR = new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
+                                    @Override
+                                    public void log(String string) {
+                                        LOG.debug(string);
+                                    }
+                                });
+    /**
+     * HTTP Client
+     */
+    private final OkHttpClient client;
     /**
      * the length of time to keep prices in the cache.
      */
@@ -115,6 +136,14 @@ public abstract class AbstractPricing implements Pricing {
     // </editor-fold>
 
     public AbstractPricing(int threads) {
+        if (LOG.isDebugEnabled()) {
+            client = new OkHttpClient().newBuilder()
+                .addNetworkInterceptor(HTTP_LOGGING_INTERCEPTOR)
+                .build();
+            HTTP_LOGGING_INTERCEPTOR.setLevel(HttpLoggingInterceptor.Level.BASIC);
+        } else {
+             client = new OkHttpClient().newBuilder().build();
+        }
         for (int i = 1; i <= threads; i++) {
             PriceFetchingThread priceFetchingThread = new PriceFetchingThread(i);
             priceFetchingThreads.add(priceFetchingThread);
@@ -122,45 +151,48 @@ public abstract class AbstractPricing implements Pricing {
         }
     }
 
+    public Gson getGSON() {
+        return GSON;
+    }
+
+    public OkHttpClient getClient() {
+        return client;
+    }
+
     @Override
-    public Double getPriceCache(int itemID, PricingType type, PricingNumber number) {
-        CachedPrice cp = cache.get(itemID);
+    public Double getPriceCache(int typeID, PriceType type) {
+        CachedPrice cp = cache.get(typeID);
         if (cp != null) {
-            return cp.getContainer().getPrice(type, number);
+            return cp.getContainer().getPrice(type);
         } else {
             return null;
         }
     }
 
     @Override
-    public Double getPrice(int itemID, PricingType type, PricingNumber number) {
-        CachedPrice cp = cache.get(itemID);
+    public Double getPrice(int typeID, PriceType type) {
+        CachedPrice cp = cache.get(typeID);
         // Queue the price for fetching, if: we do not have a cached price
         // If we have a cached price, then queue the fetch only if the
         // cache timers are enabled.
         boolean cacheTimout = cp != null && (cp.getTime()+cacheTimer) < System.currentTimeMillis();
         if (cp == null //DoesNotExists
                 || (options.getCacheTimersEnabled() && cacheTimout)) {
-            queuePrice(itemID);
+            queuePrice(typeID);
             return null;
         } else {
-            return cp.getContainer().getPrice(type, number);
+            return cp.getContainer().getPrice(type);
         }
     }
 
     @Override
-    public Double getPrice(int itemID) {
-        return getPrice(itemID, options.getPricingType(), options.getPricingNumber());
+    public void updatePrices(Set<Integer> typeIDs) {
+        queuePrices(typeIDs);
     }
 
     @Override
-    public void updatePrices(Set<Integer> itemIDs) {
-        queuePrices(itemIDs);
-    }
-
-    @Override
-    public long getNextUpdateTime(int itemID) {
-        CachedPrice cp = cache.get(itemID);
+    public long getNextUpdateTime(int typeID) {
+        CachedPrice cp = cache.get(typeID);
         if (cp == null) return -1; // needs an update.
         return cp.getTime();
     }
@@ -200,18 +232,11 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     /**
-     * fetches a single price from the data source
-     * @param itemID the item ID for the item
-     * @return a double representing the price of the item
+     * fetches the prices for the collection of typeIDs.
+     * @param typeIDs
+     * @return a map of typeID => price
      */
-    abstract protected PriceContainer fetchPrice(int itemID);
-    /**
-     * fetches the prices for the collection of itemIDs
-     * @param itemIDs
-     * @return a map of itemID => price
-     */
-    abstract protected Map<Integer, PriceContainer> fetchPrices(Collection<Integer> itemIDs);
-
+    abstract protected Map<Integer, PriceContainer> fetchPrices(Collection<Integer> typeIDs);
 
     /**
      * defines the batch size for fetching grouped prices.
@@ -231,34 +256,17 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     @Override
-    public void setPrice(int itemID, PricingType type, PricingNumber number, Double price) {
-        long cacheTime;
-        if (price > 0) {
-            // can't use the Long.MAX_VALUE as the check for "does this item need updating"
-            // is the cacheTime + cacheTimer, which, if the cacheTime is MAX_VALUE, the sum
-            // overflows, causing the it to update immediatly.
-            cacheTime = System.currentTimeMillis()+(10L*365L*24L*60L*60L);
-        } else {
-            cacheTime = -1;
-        }
-        CachedPrice current = cache.get(itemID);
-        PriceContainer.PriceContainerBuilder builder;
+    public void clearPrice(int typeID) {
+        long cacheTime = -1;
+        CachedPrice current = cache.get(typeID);
         if (current != null) {
-            builder = current.getContainer().createClone();
+            cache.put(typeID, new CachedPrice(cacheTime, current.getContainer().createClone().build()));
         } else {
-            builder = new PriceContainer.PriceContainerBuilder();
+            cache.remove(typeID);
         }
-        builder.putPrice(type, number, price);
-        cache.put(itemID, new CachedPrice(cacheTime, builder.build()));
-        notifyPricingListeners(itemID);
+        notifyPricingListeners(typeID);
     }
 
-    @Override
-    public void setPrice(int itemID, Double price) {
-        setPrice(itemID, options.getPricingType(), options.getPricingNumber(), price);
-    }
-
-   
     @Override
     public PricingOptions getPricingOptions() {
         return options;
@@ -281,27 +289,27 @@ public abstract class AbstractPricing implements Pricing {
         return false;
     }
 
-    private void notifyPricingListeners(Integer itemId) {
-        //if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingListeners.size() + " listeners with " + itemId);
+    private void notifyPricingListeners(Integer typeID) {
+        LOG.debug("notifying " + pricingListeners.size() + " pricing listeners with " + typeID);
         for (int i = pricingListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingListener> wpl = pricingListeners.get(i);
             PricingListener pl = wpl.get();
             if (pl == null) {
                 pricingListeners.remove(i);
             } else {
-                pl.priceUpdated(itemId, this);
+                pl.priceUpdated(typeID, this);
             }
         }
     }
 
     @Override
     public boolean addPricingListener(PricingListener pl) {
-        return pricingListeners.add(new WeakReference<PricingListener>(pl));
+        return pricingListeners.add(new WeakReference<>(pl));
     }
 
     @Override
     public boolean addPricingFetchListener(PricingFetchListener pfl) {
-        return pricingFetchListeners.add(new WeakReference<PricingFetchListener>(pfl));
+        return pricingFetchListeners.add(new WeakReference<>(pfl));
     }
 
     @Override
@@ -322,7 +330,7 @@ public abstract class AbstractPricing implements Pricing {
     }
 
     private void notifyPricingFetchListeners(boolean started) {
-        if (LOG.isDebugEnabled()) LOG.debug("notifying " + pricingFetchListeners.size() + " fetch listeners. [" + started + "]");
+        LOG.debug("notifying " + pricingFetchListeners.size() + " fetch listeners. [" + started + "]");
         for (int i = pricingFetchListeners.size()-1; i >= 0; --i) {
             WeakReference<PricingFetchListener> wpl = pricingFetchListeners.get(i);
             PricingFetchListener pl = wpl.get();
@@ -385,7 +393,7 @@ public abstract class AbstractPricing implements Pricing {
      * and fetches the price using the specific implementation
      */
     private class PriceFetchingThread extends Thread {
-        private final Set<Integer> evaluate = new HashSet<Integer>();
+        private final Set<Integer> evaluate = new HashSet<>();
         private SplitList failed;
 
         public PriceFetchingThread(int id) {
@@ -509,7 +517,7 @@ public abstract class AbstractPricing implements Pricing {
                 try {
                     input.close();
                 } catch (IOException ex) {
-                    
+
                 }
             }
         }
@@ -531,7 +539,7 @@ public abstract class AbstractPricing implements Pricing {
                 try {
                     output.close();
                 } catch (IOException ex) {
-                    
+
                 }
             }
         }
@@ -541,17 +549,15 @@ public abstract class AbstractPricing implements Pricing {
     public void cancelAll() {
         while (!currentlyEvaluating.isEmpty() || !waitingQueue.isEmpty()) { //While evaluating
             //Clear queue
-            synchronized (waitingQueue) {
-                while(!waitingQueue.isEmpty()) {
-                    try {
-                        notifyFailedFetch(waitingQueue.remove()); //Notify of failed price updates
-                    } catch (NoSuchElementException ex) {
-                        //This is not a problem
-                    }
+            while(!waitingQueue.isEmpty()) {
+                try {
+                    notifyFailedFetch(waitingQueue.remove()); //Notify of failed price updates
+                } catch (NoSuchElementException ex) {
+                    //This is not a problem
                 }
             }
             //Wait for evaluating to finish
-            synchronized (currentlyEvaluating) { 
+            synchronized (currentlyEvaluating) {
                 try {
                     if (!currentlyEvaluating.isEmpty()) { //If evaluating
                         currentlyEvaluating.wait(); //wait to finish
@@ -560,7 +566,7 @@ public abstract class AbstractPricing implements Pricing {
                    //Continue
                 }
             }
-            
+
         }
     }
 
@@ -624,7 +630,7 @@ public abstract class AbstractPricing implements Pricing {
 
     private List<String> fetchAttemptReason(int itemID) {
         if (!failedFetchReasons.containsKey(itemID)) {
-            failedFetchReasons.put(itemID, new ArrayList<String>());
+            failedFetchReasons.put(itemID, new ArrayList<>());
         }
         return failedFetchReasons.get(itemID);
     }
@@ -650,5 +656,5 @@ public abstract class AbstractPricing implements Pricing {
         return Collections.unmodifiableList(fetchAttemptReason(typeID));
     }
 
-    
+
 }
