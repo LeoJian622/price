@@ -22,10 +22,7 @@ package uk.me.candle.eve.pricing.options;
 
 import java.util.List;
 import uk.me.candle.eve.pricing.Pricing;
-import uk.me.candle.eve.pricing.impl.EveMarketer;
-import uk.me.candle.eve.pricing.impl.EveTycoon;
-import uk.me.candle.eve.pricing.impl.Fuzzwork;
-import uk.me.candle.eve.pricing.impl.Janice;
+import uk.me.candle.eve.pricing.impl.*;
 
 
 public enum PricingFetch {
@@ -51,6 +48,12 @@ public enum PricingFetch {
         @Override
         public Pricing getNewInstance() {
             return new Janice();
+        }
+    },
+    CEVE_MARKET() {
+        @Override
+        public Pricing getNewInstance() {
+            return new CeveMarket();
         }
     },
     ;
